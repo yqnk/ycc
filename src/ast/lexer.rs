@@ -58,7 +58,7 @@ impl Lexer {
         let digits = self.lex_while(|c| c.is_ascii_digit());
 
         match digits.parse::<i32>() {
-            Ok(n) => TokenType::Int(n),
+            Ok(n) => TokenType::Constant(n),
             Err(e) => panic!("invalid integer literal '{}': {}", digits, e),
         }
     }

@@ -7,8 +7,8 @@ pub enum Keyword {
 impl Keyword {
     pub fn from_word(s: &str) -> Option<Self> {
         match s {
-            "int" => Some(Keyword::Int),
             "return" => Some(Keyword::Return),
+            "int" => Some(Keyword::Int),
             _ => None,
         }
     }

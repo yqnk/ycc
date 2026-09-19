@@ -1,0 +1,7 @@
+This is the incremental grammar I try to follow. 
+Might not be the correct one, and will need to be checked later.
+
+<program> ::= <function>
+<function> ::= "int" <id> "(" ")" "{" <statement> "}"
+<statement> ::= "return" <exp> ";"
+<exp> ::= <int>
