@@ -4,4 +4,5 @@ Might not be the correct one, and will need to be checked later.
 <program> ::= <function>
 <function> ::= "int" <id> "(" ")" "{" <statement> "}"
 <statement> ::= "return" <exp> ";"
-<exp> ::= <int>
+<exp> ::= <unary_op> <exp> | <int>
+<unary_op> ::= "!" | "~" | "-"

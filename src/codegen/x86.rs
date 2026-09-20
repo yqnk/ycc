@@ -65,6 +65,7 @@ impl Visitor for X86Backend {
     fn visit_expr(&mut self, expr: &AstExpr) -> String {
         match expr {
             AstExpr::Int { value } => format!("${}", value),
+            AstExpr::Unop { .. } => todo!("implement unop"),
         }
     }
 }

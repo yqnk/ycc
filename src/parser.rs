@@ -22,14 +22,21 @@ impl Parser {
         self.cur_token == TokenType::Eof
     }
 
-    pub fn advance(&mut self) {
+    pub fn advance(&mut self) -> TokenType {
         self.cur_token = self.lexer.next_token();
+
+        self.cur_token.clone()
     }
 
     pub fn advance_match(&mut self, pred: impl Fn(&TokenType) -> bool) -> TokenType {
         self.advance();
         if !pred(&self.cur_token) {
-            panic!("{}:{}: could not match cur_token: {:?}" , file!(), line!(), self.cur_token)
+            panic!(
+                "{}:{}: could not match cur_token: {:?}",
+                file!(),
+                line!(),
+                self.cur_token
+            )
         }
 
         self.cur_token.clone()
@@ -60,7 +67,11 @@ impl Parser {
         let _token_rbracket = self.advance_match(|t| *t == TokenType::RBracket);
 
         if let TokenType::Identifier(name) = token_name {
-            return AstFunc { ret_type, name, statement };
+            return AstFunc {
+                ret_type,
+                name,
+                statement,
+            };
         }
 
         unreachable!()
@@ -76,8 +87,29 @@ impl Parser {
     }
 
     fn parse_exp(&mut self) -> AstExpr {
-        match self.advance_match(|t| t.is_constant()) {
+        match self.advance() {
             TokenType::Constant(value) => AstExpr::Int { value },
+            TokenType::Negation => {
+                let exp = self.parse_exp();
+                AstExpr::Unop {
+                    str: String::from("-"),
+                    exp: Box::from(exp),
+                }
+            }
+            TokenType::BitwiseComplement => {
+                let exp = self.parse_exp();
+                AstExpr::Unop {
+                    str: String::from("~"),
+                    exp: Box::new(exp),
+                }
+            }
+            TokenType::LogicalNegation => {
+                let exp = self.parse_exp();
+                AstExpr::Unop {
+                    str: String::from("!"),
+                    exp: Box::new(exp),
+                }
+            }
             _ => unreachable!(),
         }
     }

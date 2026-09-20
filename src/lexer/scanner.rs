@@ -50,6 +50,9 @@ impl Lexer {
             Some('(') => TokenType::LParen,
             Some(')') => TokenType::RParen,
             Some(';') => TokenType::Semi,
+            Some('-') => TokenType::Negation,
+            Some('~') => TokenType::BitwiseComplement,
+            Some('!') => TokenType::LogicalNegation,
             _ => unreachable!("next_token_operator called on a non-operator"),
         }
     }

@@ -7,6 +7,10 @@ pub enum TokenType {
     LParen,
     RParen,
 
+    Negation,
+    LogicalNegation,
+    BitwiseComplement,
+
     Identifier(String),
     Keyword(Keyword),
     Constant(i32),
@@ -17,7 +21,7 @@ pub enum TokenType {
 }
 
 pub fn is_operator(c: char) -> bool {
-    matches!(c, '{' | '}' | '(' | ')' | ';')
+    matches!(c, '{' | '}' | '(' | ')' | ';' | '-' | '~' | '!')
 }
 
 impl TokenType {

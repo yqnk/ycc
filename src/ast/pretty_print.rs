@@ -52,6 +52,10 @@ impl Visitor for AstPrettyPrinter {
     fn visit_expr(&mut self, expr: &AstExpr) -> Self::Expr {
         match expr {
             AstExpr::Int { value } => format!("{}", value),
+            AstExpr::Unop { str, exp } => {
+                let value = exp.accept(self);
+                format!("{} {}", str, value)
+            }
         }
     }
 }

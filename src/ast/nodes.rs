@@ -15,5 +15,6 @@ pub enum AstStatement {
 }
 
 pub enum AstExpr {
+    Unop { str: String, exp: Box<AstExpr> },
     Int { value: i32 },
 }
