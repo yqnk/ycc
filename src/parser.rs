@@ -1,9 +1,5 @@
-use crate::ast::Type;
-use crate::ast::node::{AstExpr, AstFunc, AstProgram, AstStatement};
-
-use super::keywords::Keyword;
-use super::lexer::Lexer;
-use super::token::TokenType;
+use crate::ast::{AstExpr, AstFunc, AstProgram, AstStatement, Type};
+use crate::lexer::{Keyword, Lexer, TokenType};
 
 #[derive(Debug)]
 pub struct Parser {

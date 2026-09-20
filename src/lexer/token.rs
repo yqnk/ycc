@@ -1,4 +1,4 @@
-use super::keywords::Keyword;
+use super::keyword::Keyword;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenType {

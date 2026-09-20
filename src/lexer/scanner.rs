@@ -1,6 +1,6 @@
 use std::fs;
 
-use super::keywords::Keyword;
+use super::keyword::Keyword;
 use super::token::{TokenType, is_operator};
 
 #[derive(Debug)]
