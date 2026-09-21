@@ -7,9 +7,15 @@ pub enum TokenType {
     LParen,
     RParen,
 
-    Negation,
+    // Unop
+    Sub,
     LogicalNegation,
     BitwiseComplement,
+
+    // Binop
+    Add,
+    Mul,
+    Div,
 
     Identifier(String),
     Keyword(Keyword),
@@ -21,7 +27,10 @@ pub enum TokenType {
 }
 
 pub fn is_operator(c: char) -> bool {
-    matches!(c, '{' | '}' | '(' | ')' | ';' | '-' | '~' | '!')
+    matches!(
+        c,
+        '{' | '}' | '(' | ')' | ';' | '-' | '~' | '!' | '+' | '*' | '/'
+    )
 }
 
 impl TokenType {
@@ -43,5 +52,16 @@ impl TokenType {
 
     pub fn is_semi(&self) -> bool {
         *self == TokenType::Semi
+    }
+
+    pub fn is_unop(&self) -> bool {
+        matches!(
+            self,
+            TokenType::BitwiseComplement | TokenType::Sub | TokenType::LogicalNegation
+        )
+    }
+
+    pub fn is_binop(&self) -> bool {
+        matches!(self, TokenType::Add | TokenType::Mul | TokenType::Div)
     }
 }

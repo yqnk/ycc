@@ -1,4 +1,6 @@
-use crate::ast::{AstExpr, AstFunc, AstProgram, AstStatement, Type};
+use crate::ast::{
+    AstExpr, AstFactor, AstFunc, AstProgram, AstStatement, AstTerm, Binop, Type, Unop,
+};
 use crate::lexer::{Keyword, Lexer, TokenType};
 
 #[derive(Debug)]
@@ -23,7 +25,7 @@ impl Parser {
     }
 
     pub fn advance(&mut self) -> TokenType {
-        self.cur_token = self.lexer.next_token();
+        self.cur_token = self.lexer.next_token_pop();
 
         self.cur_token.clone()
     }
@@ -87,30 +89,79 @@ impl Parser {
     }
 
     fn parse_exp(&mut self) -> AstExpr {
+        let first = self.parse_term();
+        let mut rest = Vec::new();
+
+        let mut next = self.lexer.next_token_peek();
+        while matches!(next, TokenType::Add | TokenType::Sub) {
+            self.advance();
+
+            let binop = match next {
+                TokenType::Add => Binop::Add,
+                _ => Binop::Sub,
+            };
+
+            let next_term = self.parse_term();
+            rest.push((binop, next_term));
+
+            next = self.lexer.next_token_peek();
+        }
+
+        AstExpr { first, rest }
+    }
+
+    fn parse_term(&mut self) -> AstTerm {
+        let first = self.parse_factor();
+        let mut rest = Vec::new();
+
+        let mut next = self.lexer.next_token_peek();
+        while matches!(next, TokenType::Mul | TokenType::Div) {
+            self.advance();
+
+            let binop = match next {
+                TokenType::Mul => Binop::Mul,
+                _ => Binop::Div,
+            };
+
+            let next_factor = self.parse_factor();
+            rest.push((binop, next_factor));
+
+            next = self.lexer.next_token_peek();
+        }
+
+        AstTerm { first, rest }
+    }
+
+    fn parse_factor(&mut self) -> AstFactor {
         match self.advance() {
-            TokenType::Constant(value) => AstExpr::Int { value },
-            TokenType::Negation => {
+            TokenType::LParen => {
                 let exp = self.parse_exp();
-                AstExpr::Unop {
-                    str: String::from("-"),
-                    exp: Box::from(exp),
+                let _rpar = self.advance_match(|t| *t == TokenType::RParen);
+                AstFactor::Paren(Box::new(exp))
+            }
+            TokenType::Sub => {
+                let factor = self.parse_factor();
+                AstFactor::Unary {
+                    op: Unop::Negation,
+                    factor: Box::new(factor),
                 }
             }
             TokenType::BitwiseComplement => {
-                let exp = self.parse_exp();
-                AstExpr::Unop {
-                    str: String::from("~"),
-                    exp: Box::new(exp),
+                let factor = self.parse_factor();
+                AstFactor::Unary {
+                    op: Unop::BitwiseComplement,
+                    factor: Box::new(factor),
                 }
             }
             TokenType::LogicalNegation => {
-                let exp = self.parse_exp();
-                AstExpr::Unop {
-                    str: String::from("!"),
-                    exp: Box::new(exp),
+                let factor = self.parse_factor();
+                AstFactor::Unary {
+                    op: Unop::LogicalNegation,
+                    factor: Box::new(factor),
                 }
             }
-            _ => unreachable!(),
+            TokenType::Constant(value) => AstFactor::Int(value),
+            _ => unimplemented!("unknown factor token"),
         }
     }
 }

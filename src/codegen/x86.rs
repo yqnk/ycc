@@ -1,6 +1,6 @@
 use std::fmt::Write;
 
-use crate::ast::{AstExpr, AstFunc, AstProgram, AstStatement, Visitor};
+use crate::ast::{AstExpr, AstFactor, AstFunc, AstProgram, AstStatement, AstTerm, Binop, Unop, Visitor};
 
 #[derive(Default)]
 pub struct X86Backend {
@@ -38,6 +38,8 @@ impl Visitor for X86Backend {
     type Func = ();
     type Statement = ();
     type Expr = ();
+    type Term = ();
+    type Factor = ();
 
     fn visit_program(&mut self, program: &AstProgram) -> String {
         self.out.clear();
@@ -61,24 +63,15 @@ impl Visitor for X86Backend {
         }
     }
 
-    fn visit_expr(&mut self, expr: &AstExpr) {
-        match expr {
-            AstExpr::Int { value } => {
-                self.instr("movl", &format!("${}, %eax", value));
-            }
-            AstExpr::Unop { str, exp } => {
-                exp.accept(self);
-                match str.as_str() {
-                    "-" => self.instr("negl", "%eax"),
-                    "~" => self.instr("notl", "%eax"),
-                    "!" => {
-                        self.instr("cmpl", "$0, %eax");
-                        self.instr("movl", "$0, %eax");
-                        self.instr("sete", "%al");
-                    }
-                    o => unimplemented!("unop {}", o),
-                }
-            }
-        }
+    fn visit_expr(&mut self, expr: &AstExpr) -> Self::Expr {
+        todo!()
+    }
+
+    fn visit_term(&mut self, expr: &AstTerm) -> Self::Term {
+        todo!()
+    }
+
+    fn visit_factor(&mut self, expr: &AstFactor) -> Self::Factor {
+        todo!()
     }
 }

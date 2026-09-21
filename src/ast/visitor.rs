@@ -1,15 +1,19 @@
-use super::nodes::{AstExpr, AstFunc, AstProgram, AstStatement};
+use super::nodes::{AstExpr, AstFactor, AstFunc, AstProgram, AstStatement, AstTerm};
 
 pub trait Visitor {
     type Program;
     type Func;
     type Statement;
     type Expr;
+    type Term;
+    type Factor;
 
     fn visit_program(&mut self, program: &AstProgram) -> Self::Program;
     fn visit_func(&mut self, func: &AstFunc) -> Self::Func;
     fn visit_statement(&mut self, statement: &AstStatement) -> Self::Statement;
     fn visit_expr(&mut self, expr: &AstExpr) -> Self::Expr;
+    fn visit_term(&mut self, expr: &AstTerm) -> Self::Term;
+    fn visit_factor(&mut self, expr: &AstFactor) -> Self::Factor;
 }
 
 impl AstProgram {
@@ -33,5 +37,17 @@ impl AstStatement {
 impl AstExpr {
     pub fn accept<V: Visitor>(&self, visitor: &mut V) -> V::Expr {
         visitor.visit_expr(self)
+    }
+}
+
+impl AstTerm {
+    pub fn accept<V: Visitor>(&self, visitor: &mut V) -> V::Term {
+        visitor.visit_term(self)
+    }
+}
+
+impl AstFactor {
+    pub fn accept<V: Visitor>(&self, visitor: &mut V) -> V::Factor {
+        visitor.visit_factor(self)
     }
 }

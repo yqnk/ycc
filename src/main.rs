@@ -15,11 +15,11 @@ fn main() {
     let mut pretty_printer = AstPrettyPrinter::new();
     pretty_printer.pretty_print(&program);
 
-    let mut backend = X86Backend::new();
-    let asm = backend.emit_program(&program);
-
-    let out_path = Path::new(&path).with_extension("s");
-    fs::write(&out_path, &asm).expect("could not write assembly");
-
-    println!("\nwrote {}", out_path.display());
+    // let mut backend = X86Backend::new();
+    // let asm = backend.emit_program(&program);
+    //
+    // let out_path = Path::new(&path).with_extension("s");
+    // fs::write(&out_path, &asm).expect("could not write assembly");
+    //
+    // println!("\nwrote {}", out_path.display());
 }

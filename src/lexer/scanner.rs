@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::fs;
 
 use super::keyword::Keyword;
@@ -7,13 +8,20 @@ use super::token::{TokenType, is_operator};
 pub struct Lexer {
     pub content: Vec<u8>,
     pub pos: usize,
+
+    pub token_queue: VecDeque<TokenType>,
 }
 
 impl Lexer {
     pub fn init(file_path: &str) -> Self {
         let content = fs::read(file_path).expect("failed to read input file");
+        let token_queue = VecDeque::new();
 
-        Self { content, pos: 0 }
+        Self {
+            content,
+            pos: 0,
+            token_queue,
+        }
     }
 
     fn peek(&self) -> Option<char> {
@@ -50,9 +58,16 @@ impl Lexer {
             Some('(') => TokenType::LParen,
             Some(')') => TokenType::RParen,
             Some(';') => TokenType::Semi,
-            Some('-') => TokenType::Negation,
+
+            // Unop
+            Some('-') => TokenType::Sub,
             Some('~') => TokenType::BitwiseComplement,
             Some('!') => TokenType::LogicalNegation,
+
+            // Binop
+            Some('+') => TokenType::Add,
+            Some('*') => TokenType::Mul,
+            Some('/') => TokenType::Div,
             _ => unreachable!("next_token_operator called on a non-operator"),
         }
     }
@@ -75,15 +90,34 @@ impl Lexer {
         }
     }
 
-    pub fn next_token(&mut self) -> TokenType {
+    pub fn next_token_peek(&mut self) -> TokenType {
+        if self.token_queue.len() > 0 {
+            if let Some(f) = self.token_queue.front() {
+                return f.clone();
+            }
+        }
+
         self.skip_whitespace();
 
-        match self.peek() {
+        let token_type = match self.peek() {
             None => TokenType::Eof,
             Some(c) if is_operator(c) => self.next_token_operator(),
             Some(c) if c.is_ascii_digit() => self.next_token_int(),
             Some(c) if c.is_ascii_alphabetic() || c == '_' => self.next_token_word(),
             Some(c) => panic!("unexpected character '{}' at offset {}", c, self.pos),
+        };
+
+        self.token_queue.push_back(token_type.clone());
+        token_type
+    }
+
+    pub fn next_token_pop(&mut self) -> TokenType {
+        let _ = self.next_token_peek();
+
+        if let Some(t) = self.token_queue.pop_front() {
+            return t;
         }
+
+        panic!("lexer went too far")
     }
 }

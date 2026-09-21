@@ -1,4 +1,4 @@
-use super::Type;
+use super::{Binop, Type, Unop};
 
 pub struct AstProgram {
     pub main: AstFunc,
@@ -14,7 +14,18 @@ pub enum AstStatement {
     Return { exp: AstExpr },
 }
 
-pub enum AstExpr {
-    Unop { str: String, exp: Box<AstExpr> },
-    Int { value: i32 },
+pub struct AstExpr {
+    pub first: AstTerm,
+    pub rest: Vec<(Binop, AstTerm)>,
+}
+
+pub struct AstTerm {
+    pub first: AstFactor,
+    pub rest: Vec<(Binop, AstFactor)>,
+}
+
+pub enum AstFactor {
+    Paren(Box<AstExpr>),
+    Unary { op: Unop, factor: Box<AstFactor> },
+    Int(i32),
 }
