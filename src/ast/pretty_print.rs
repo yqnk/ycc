@@ -1,6 +1,12 @@
 use super::nodes::{AstExpr, AstFunc, AstProgram, AstStatement};
 use super::visitor::Visitor;
 
+macro_rules! iprintln {
+    ($astpp:ident, $body:expr) => {
+        println!("{}{}", " ".repeat($astpp.indent * 2), $body);
+    };
+}
+
 #[derive(Default)]
 pub struct AstPrettyPrinter {
     indent: usize,
@@ -16,10 +22,6 @@ impl AstPrettyPrinter {
 
         program.accept(self);
     }
-
-    pub fn iprintln(&self, str: &str) {
-        println!("{}{}", "\t".repeat(self.indent), str);
-    }
 }
 
 impl Visitor for AstPrettyPrinter {
@@ -33,8 +35,9 @@ impl Visitor for AstPrettyPrinter {
     }
 
     fn visit_func(&mut self, func: &AstFunc) -> Self::Func {
-        self.iprintln(&format!("FUN {:?} {}", func.ret_type, func.name));
-        self.iprintln(&format!("body:"));
+        iprintln!(self, &format!("FUN {:?} {}", func.ret_type, func.name));
+        iprintln!(self, &format!("body:"));
+
         self.indent += 1;
         func.statement.accept(self);
         self.indent -= 1;
@@ -44,17 +47,17 @@ impl Visitor for AstPrettyPrinter {
         match statement {
             AstStatement::Return { exp } => {
                 let value = exp.accept(self);
-                self.iprintln(&format!("RETURN {}", value));
+                iprintln!(self, &format!("RETURN {}", value));
             }
         }
     }
 
     fn visit_expr(&mut self, expr: &AstExpr) -> Self::Expr {
         match expr {
-            AstExpr::Int { value } => format!("{}", value),
+            AstExpr::Int { value } => format!("Int({})", value),
             AstExpr::Unop { str, exp } => {
                 let value = exp.accept(self);
-                format!("{} {}", str, value)
+                format!("Unop({}, {})", str, value)
             }
         }
     }

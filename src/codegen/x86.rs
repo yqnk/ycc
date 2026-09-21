@@ -37,7 +37,7 @@ impl Visitor for X86Backend {
     type Program = String;
     type Func = ();
     type Statement = ();
-    type Expr = String;
+    type Expr = ();
 
     fn visit_program(&mut self, program: &AstProgram) -> String {
         self.out.clear();
@@ -55,17 +55,30 @@ impl Visitor for X86Backend {
     fn visit_statement(&mut self, statement: &AstStatement) {
         match statement {
             AstStatement::Return { exp } => {
-                let src = exp.accept(self);
-                self.instr("movl", &format!("{}, %eax", src));
+                exp.accept(self);
                 self.instr("ret", "");
             }
         }
     }
 
-    fn visit_expr(&mut self, expr: &AstExpr) -> String {
+    fn visit_expr(&mut self, expr: &AstExpr) {
         match expr {
-            AstExpr::Int { value } => format!("${}", value),
-            AstExpr::Unop { .. } => todo!("implement unop"),
+            AstExpr::Int { value } => {
+                self.instr("movl", &format!("${}, %eax", value));
+            }
+            AstExpr::Unop { str, exp } => {
+                exp.accept(self);
+                match str.as_str() {
+                    "-" => self.instr("negl", "%eax"),
+                    "~" => self.instr("notl", "%eax"),
+                    "!" => {
+                        self.instr("cmpl", "$0, %eax");
+                        self.instr("movl", "$0, %eax");
+                        self.instr("sete", "%al");
+                    }
+                    o => unimplemented!("unop {}", o),
+                }
+            }
         }
     }
 }
