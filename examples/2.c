@@ -1,1 +1,1 @@
-int main() { return 3 + 3 - ~6; }
+int main() { return !!-~+!3 + 3; }

@@ -13,11 +13,11 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn init(file_path: &str) -> Self {
+    pub fn init(file_path: &str) -> Lexer {
         let content = fs::read(file_path).expect("failed to read input file");
         let token_queue = VecDeque::new();
 
-        Self {
+        Lexer {
             content,
             pos: 0,
             token_queue,

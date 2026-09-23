@@ -1,3 +1,5 @@
+use core::fmt;
+
 use super::{Binop, Type, Unop};
 
 pub struct AstProgram {

@@ -82,13 +82,13 @@ impl Parser {
     // this only works for Return(Int);
     fn parse_statement(&mut self) -> AstStatement {
         let _token_return = self.advance_match(|t| *t == TokenType::Keyword(Keyword::Return));
-        let exp = self.parse_exp();
+        let exp = self.parse_expr();
         let _token_semi = self.advance_match(|t| t.is_semi());
 
         AstStatement::Return { exp }
     }
 
-    fn parse_exp(&mut self) -> AstExpr {
+    fn parse_expr(&mut self) -> AstExpr {
         let first = self.parse_term();
         let mut rest = Vec::new();
 
@@ -135,7 +135,7 @@ impl Parser {
     fn parse_factor(&mut self) -> AstFactor {
         match self.advance() {
             TokenType::LParen => {
-                let exp = self.parse_exp();
+                let exp = self.parse_expr();
                 let _rpar = self.advance_match(|t| *t == TokenType::RParen);
                 AstFactor::Paren(Box::new(exp))
             }
@@ -143,6 +143,13 @@ impl Parser {
                 let factor = self.parse_factor();
                 AstFactor::Unary {
                     op: Unop::Negation,
+                    factor: Box::new(factor),
+                }
+            }
+            TokenType::Add => {
+                let factor = self.parse_factor();
+                AstFactor::Unary {
+                    op: Unop::Addition,
                     factor: Box::new(factor),
                 }
             }

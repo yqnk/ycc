@@ -12,8 +12,8 @@ pub trait Visitor {
     fn visit_func(&mut self, func: &AstFunc) -> Self::Func;
     fn visit_statement(&mut self, statement: &AstStatement) -> Self::Statement;
     fn visit_expr(&mut self, expr: &AstExpr) -> Self::Expr;
-    fn visit_term(&mut self, expr: &AstTerm) -> Self::Term;
-    fn visit_factor(&mut self, expr: &AstFactor) -> Self::Factor;
+    fn visit_term(&mut self, term: &AstTerm) -> Self::Term;
+    fn visit_factor(&mut self, factor: &AstFactor) -> Self::Factor;
 }
 
 impl AstProgram {

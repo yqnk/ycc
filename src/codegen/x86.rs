@@ -1,6 +1,8 @@
 use std::fmt::Write;
 
-use crate::ast::{AstExpr, AstFactor, AstFunc, AstProgram, AstStatement, AstTerm, Binop, Unop, Visitor};
+use crate::ast::{
+    AstExpr, AstFactor, AstFunc, AstProgram, AstStatement, AstTerm, Binop, Unop, Visitor,
+};
 
 #[derive(Default)]
 pub struct X86Backend {
@@ -64,14 +66,59 @@ impl Visitor for X86Backend {
     }
 
     fn visit_expr(&mut self, expr: &AstExpr) -> Self::Expr {
-        todo!()
+        expr.first.accept(self); // lhs in rax
+
+        for (op, term) in &expr.rest {
+            self.instr("pushq", "%rax"); // push lhs
+            term.accept(self); // save rhs in rax
+            self.instr("movq", "%rax, %rcx"); // move rhs in rcx
+            self.instr("popq", "%rax"); // get lhs back in rax
+
+            match op {
+                Binop::Add => self.instr("add", "%rcx, %rax"),
+                Binop::Sub => self.instr("sub", "%rcx, %rax"),
+                _ => unreachable!(),
+            }
+        }
     }
 
-    fn visit_term(&mut self, expr: &AstTerm) -> Self::Term {
-        todo!()
+    fn visit_term(&mut self, term: &AstTerm) -> Self::Term {
+        term.first.accept(self);
+
+        for (op, factor) in &term.rest {
+            self.instr("pushq", "%rax");
+            factor.accept(self);
+            self.instr("movq", "%rax, %rcx");
+            self.instr("popq", "%rax");
+
+            match op {
+                Binop::Mul => self.instr("imul", "%rcx"),
+                Binop::Div => self.instr("idiv", "%rcx"),
+                _ => unreachable!(),
+            }
+        }
     }
 
-    fn visit_factor(&mut self, expr: &AstFactor) -> Self::Factor {
-        todo!()
+    fn visit_factor(&mut self, factor: &AstFactor) -> Self::Factor {
+        match factor {
+            AstFactor::Paren(exp) => exp.accept(self),
+            AstFactor::Unary { op, factor } => {
+                factor.accept(self);
+
+                match op {
+                    Unop::Negation => self.instr("negq", "%rax"),
+                    Unop::LogicalNegation => {
+                        self.instr("cmpq", "$0, %rax");
+                        self.instr("movq", "$0, %rax");
+                        self.instr("sete", "%al");
+                    }
+                    Unop::BitwiseComplement => self.instr("notq", "%rax"),
+                    _ => (),
+                }
+            }
+            AstFactor::Int(v) => {
+                self.instr("movq", &format!("${}, %rax", v));
+            }
+        }
     }
 }

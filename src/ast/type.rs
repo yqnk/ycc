@@ -13,6 +13,7 @@ pub enum Binop {
 }
 
 pub enum Unop {
+    Addition,
     Negation,
     LogicalNegation,
     BitwiseComplement,
@@ -41,6 +42,7 @@ impl Binop {
 impl Unop {
     pub fn symbol(&self) -> &'static str {
         match self {
+            Unop::Addition => "+",
             Unop::Negation => "-",
             Unop::LogicalNegation => "!",
             Unop::BitwiseComplement => "~",
