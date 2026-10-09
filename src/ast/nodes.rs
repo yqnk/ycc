@@ -20,8 +20,23 @@ pub struct AstExpr {
 }
 
 pub struct AstLogicalAndExpr {
+    pub first: AstBitwiseOrExpr,
+    pub rest: Vec<(Binop, AstBitwiseOrExpr)>, // binop can only be &&
+}
+
+pub struct AstBitwiseOrExpr {
+    pub first: AstBitwiseXorExpr,
+    pub rest: Vec<(Binop, AstBitwiseXorExpr)>,
+}
+
+pub struct AstBitwiseXorExpr {
+    pub first: AstBitwiseAndExpr,
+    pub rest: Vec<(Binop, AstBitwiseAndExpr)>,
+}
+
+pub struct AstBitwiseAndExpr {
     pub first: AstEqualityExpr,
-    pub rest: Vec<(Binop, AstEqualityExpr)>, // binop can only be &&
+    pub rest: Vec<(Binop, AstEqualityExpr)>,
 }
 
 pub struct AstEqualityExpr {
@@ -35,8 +50,13 @@ pub struct AstRelationalExpr {
 }
 
 pub struct AstAdditiveExpr {
+    pub first: AstShiftExpr,
+    pub rest: Vec<(Binop, AstShiftExpr)>, // binop can only be * /
+}
+
+pub struct AstShiftExpr {
     pub first: AstTerm,
-    pub rest: Vec<(Binop, AstTerm)>, // binop can only be * /
+    pub rest: Vec<(Binop, AstTerm)>,
 }
 
 pub struct AstTerm {

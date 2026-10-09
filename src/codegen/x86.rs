@@ -50,9 +50,13 @@ impl Visitor for X86Backend {
 
     type Expr = ();
     type LogicalAndExpr = ();
+    type BitwiseOrExpr = ();
+    type BitwiseXorExpr = ();
+    type BitwiseAndExpr = ();
     type EqualityExpr = ();
     type RelationalExpr = ();
     type AdditiveExpr = ();
+    type ShiftExpr = ();
 
     type Term = ();
     type Factor = ();
@@ -90,13 +94,13 @@ impl Visitor for X86Backend {
         let true_label = format!(".Lor_true_{}", id);
         let end_label = format!(".Lor_end_{}", id);
 
-        for (op, laexpr) in &expr.rest {
+        for (op, exp) in &expr.rest {
             assert!(matches!(op, Binop::LogicalOr));
 
             // lhs already in rax: if it's true, || is true and rhs is never evaluated
             self.instr("cmpq", "$0, %rax");
             self.instr("jne", &true_label);
-            laexpr.accept(self);
+            exp.accept(self);
         }
 
         // last operand decides, normalized to 0 or 1
@@ -125,13 +129,13 @@ impl Visitor for X86Backend {
         let false_label = format!(".Land_false_{}", id);
         let end_label = format!(".Land_end_{}", id);
 
-        for (op, eqexpr) in &expr.rest {
+        for (op, exp) in &expr.rest {
             assert!(matches!(op, Binop::LogicalAnd));
 
             // lhs already in rax: if it's false, && is false and rhs is never evaluated
             self.instr("cmpq", "$0, %rax");
             self.instr("je", &false_label);
-            eqexpr.accept(self);
+            exp.accept(self);
         }
 
         // last operand decides, normalized to 0 or 1
@@ -146,6 +150,69 @@ impl Visitor for X86Backend {
         self.label(&end_label);
     }
 
+    fn visit_bitwise_or_expr(
+        &mut self,
+        expr: &crate::ast::AstBitwiseOrExpr,
+    ) -> Self::BitwiseOrExpr {
+        expr.first.accept(self);
+
+        if expr.rest.is_empty() {
+            return;
+        }
+
+        for (op, exp) in &expr.rest {
+            assert!(matches!(op, Binop::BitwiseOr));
+
+            self.instr("push", "%rax");
+            exp.accept(self);
+            self.instr("pop", "%rcx");
+
+            self.instr("OR", "%rax, %rcx");
+        }
+    }
+
+    fn visit_bitwise_xor_expr(
+        &mut self,
+        expr: &crate::ast::AstBitwiseXorExpr,
+    ) -> Self::BitwiseXorExpr {
+        expr.first.accept(self);
+
+        if expr.rest.is_empty() {
+            return;
+        }
+
+        for (op, exp) in &expr.rest {
+            assert!(matches!(op, Binop::BitwiseXor));
+
+            self.instr("push", "%rax");
+            exp.accept(self);
+            self.instr("pop", "%rcx");
+
+            self.instr("XOR", "%rax, %rcx");
+        }
+    }
+
+    fn visit_bitwise_and_expr(
+        &mut self,
+        expr: &crate::ast::AstBitwiseAndExpr,
+    ) -> Self::BitwiseAndExpr {
+        expr.first.accept(self);
+
+        if expr.rest.is_empty() {
+            return;
+        }
+
+        for (op, exp) in &expr.rest {
+            assert!(matches!(op, Binop::BitwiseAnd));
+
+            self.instr("push", "%rax");
+            exp.accept(self);
+            self.instr("pop", "%rcx");
+
+            self.instr("AND", "%rax, %rcx");
+        }
+    }
+
     fn visit_equality_expr(&mut self, expr: &crate::ast::AstEqualityExpr) -> Self::EqualityExpr {
         expr.first.accept(self);
 
@@ -153,9 +220,9 @@ impl Visitor for X86Backend {
             return;
         }
 
-        for (op, relexpr) in &expr.rest {
+        for (op, exp) in &expr.rest {
             self.instr("push", "%rax");
-            relexpr.accept(self);
+            exp.accept(self);
             self.instr("pop", "%rcx");
             self.instr("cmpq", "%rax, %rcx");
 
@@ -179,9 +246,9 @@ impl Visitor for X86Backend {
             return;
         }
 
-        for (op, relexpr) in &expr.rest {
+        for (op, exp) in &expr.rest {
             self.instr("push", "%rax");
-            relexpr.accept(self);
+            exp.accept(self);
             self.instr("pop", "%rcx");
             self.instr("cmpq", "%rcx, %rax");
 
@@ -204,15 +271,36 @@ impl Visitor for X86Backend {
             return;
         }
 
-        for (op, term) in &expr.rest {
+        for (op, exp) in &expr.rest {
             self.instr("pushq", "%rax"); // push lhs
-            term.accept(self); // save rhs in rax
+            exp.accept(self); // save rhs in rax
             self.instr("movq", "%rax, %rcx"); // move rhs in rcx
             self.instr("popq", "%rax"); // get lhs back in rax
 
             match op {
                 Binop::Add => self.instr("add", "%rcx, %rax"),
                 Binop::Sub => self.instr("sub", "%rcx, %rax"),
+                _ => unreachable!(),
+            }
+        }
+    }
+
+    fn visit_shift_expr(&mut self, expr: &crate::ast::AstShiftExpr) -> Self::ShiftExpr {
+        expr.first.accept(self);
+
+        if expr.rest.is_empty() {
+            return;
+        }
+
+        for (op, exp) in &expr.rest {
+            self.instr("pushq", "%rax");
+            exp.accept(self);
+            self.instr("movq", "%rax, %rcx");
+            self.instr("popq", "%rax");
+
+            match op {
+                Binop::LShift => self.instr("shlq", "%cl, %rax"),
+                Binop::RShift => self.instr("shrq", "%cl, %rax"),
                 _ => unreachable!(),
             }
         }
@@ -230,10 +318,15 @@ impl Visitor for X86Backend {
             factor.accept(self);
             self.instr("movq", "%rax, %rcx");
             self.instr("popq", "%rax");
+            self.instr("cqto", "");
 
             match op {
-                Binop::Mul => self.instr("imul", "%rcx"),
-                Binop::Div => self.instr("idiv", "%rcx"),
+                Binop::Mul => self.instr("imulq", "%rcx"),
+                Binop::Div => self.instr("idivq", "%rcx"),
+                Binop::Mod => {
+                    self.instr("idivq", "%rcx");
+                    self.instr("movq", "%rdx, %rax");
+                }
                 _ => unreachable!(),
             }
         }

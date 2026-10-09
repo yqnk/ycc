@@ -8,7 +8,8 @@ Might not be the correct one, and will need to be checked later.
 <logical-and-exp> ::= <equality-exp> { "&&" <equality-exp> }
 <equality-exp> ::= <relational-exp> { ("!=" | "==") <relational-exp> }
 <relational-exp> ::= <additive-exp> { ("<" | ">" | "<=" | ">=") <additive-exp> }
-<additive-exp> ::= <term> { ("+" | "-") <term> }
-<term> ::= <factor> { ("*" | "/") <factor> }
+<additive-exp> ::= <shift-exp> { ("+" | "-") <shift-exp> }
+<shift-exp> ::= <term> { ("<<" | ">>") <term> }
+<term> ::= <factor> { ("*" | "/" | "%") <factor> }
 <factor> ::= "(" <exp> ")" | <unary_op> <factor> | <int>
 <unary_op> ::= "!" | "~" | "-"

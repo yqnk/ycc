@@ -16,6 +16,7 @@ pub enum TokenType {
     Add, // Also an Unop btw...
     Mul,
     Div,
+    Mod,
     LogicalAnd,
     LogicalOr,
     EqualTo,
@@ -24,6 +25,13 @@ pub enum TokenType {
     LessThanOrEqualTo,
     GreaterThan,
     GreaterThanOrEqualTo,
+
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+
+    LShift,
+    RShift,
 
     Identifier(String),
     Keyword(Keyword),
@@ -47,6 +55,7 @@ pub fn is_operator(c: char) -> bool {
             | '+'
             | '*'
             | '/'
+            | '%'
             | '&'
             | '|'
             | '='
@@ -74,29 +83,5 @@ impl TokenType {
 
     pub fn is_semi(&self) -> bool {
         *self == TokenType::Semi
-    }
-
-    pub fn is_unop(&self) -> bool {
-        matches!(
-            self,
-            TokenType::BitwiseComplement | TokenType::Sub | TokenType::LogicalNegation
-        )
-    }
-
-    pub fn is_binop(&self) -> bool {
-        matches!(
-            self,
-            TokenType::Add
-                | TokenType::Mul
-                | TokenType::Div
-                | TokenType::LogicalAnd
-                | TokenType::LogicalOr
-                | TokenType::EqualTo
-                | TokenType::NotEqualTo
-                | TokenType::LessThan
-                | TokenType::LessThanOrEqualTo
-                | TokenType::GreaterThan
-                | TokenType::GreaterThanOrEqualTo
-        )
     }
 }

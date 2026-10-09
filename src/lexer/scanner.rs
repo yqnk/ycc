@@ -83,9 +83,13 @@ impl Lexer {
             Some('+') => TokenType::Add,
             Some('*') => TokenType::Mul,
             Some('/') => TokenType::Div,
+            Some('%') => TokenType::Mod,
+
             Some('<') => {
                 if self.consume_if('=') {
                     TokenType::LessThanOrEqualTo
+                } else if self.consume_if('<') {
+                    TokenType::LShift
                 } else {
                     TokenType::LessThan
                 }
@@ -93,14 +97,32 @@ impl Lexer {
             Some('>') => {
                 if self.consume_if('=') {
                     TokenType::GreaterThanOrEqualTo
+                } else if self.consume_if('>') {
+                    TokenType::RShift
                 } else {
                     TokenType::GreaterThan
                 }
             }
 
             // Double-char only
-            Some('&') if self.consume_if('&') => TokenType::LogicalAnd,
-            Some('|') if self.consume_if('|') => TokenType::LogicalOr,
+            Some('&') => {
+                if self.consume_if('|') {
+                    return TokenType::LogicalAnd;
+                } else {
+                    return TokenType::BitwiseAnd;
+                }
+            }
+
+            Some('|') => {
+                if self.consume_if('|') {
+                    return TokenType::LogicalOr;
+                } else {
+                    return TokenType::BitwiseOr;
+                }
+            }
+
+            Some('^') => TokenType::BitwiseXor,
+
             Some('=') if self.consume_if('=') => TokenType::EqualTo,
 
             Some(c) => panic!("unexpected operator '{}' at offset {}", c, self.pos - 1),

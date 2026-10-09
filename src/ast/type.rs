@@ -11,6 +11,7 @@ pub enum Binop {
     Sub,
     Mul,
     Div,
+    Mod,
     LogicalAnd,
     LogicalOr,
     EqualTo,
@@ -19,6 +20,11 @@ pub enum Binop {
     LessThanOrEqualTo,
     GreaterThan,
     GreaterThanOrEqualTo,
+    LShift,
+    RShift,
+    BitwiseOr,
+    BitwiseXor,
+    BitwiseAnd,
 }
 
 pub enum Unop {
@@ -44,6 +50,7 @@ impl Binop {
             Binop::Sub => "-",
             Binop::Mul => "*",
             Binop::Div => "/",
+            Binop::Mod => "%",
             Binop::LogicalOr => "||",
             Binop::LogicalAnd => "&&",
             Binop::EqualTo => "==",
@@ -52,6 +59,11 @@ impl Binop {
             Binop::LessThanOrEqualTo => "<=",
             Binop::GreaterThan => ">",
             Binop::GreaterThanOrEqualTo => ">=",
+            Binop::LShift => "<<",
+            Binop::RShift => ">>",
+            Binop::BitwiseOr => "|",
+            Binop::BitwiseXor => "^",
+            Binop::BitwiseAnd => "&",
         }
     }
 }

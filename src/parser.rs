@@ -104,20 +104,71 @@ impl Parser {
     }
 
     fn parse_logical_and_expr(&mut self) -> AstLogicalAndExpr {
-        let first = self.parse_equality_expr();
+        let first = self.parse_bitwise_or_expr();
         let mut rest = Vec::new();
 
         let mut next = self.lexer.next_token_peek();
         while matches!(next, TokenType::LogicalAnd) {
             self.advance();
 
-            let next_expr = self.parse_equality_expr();
+            let next_expr = self.parse_bitwise_or_expr();
             rest.push((Binop::LogicalAnd, next_expr));
 
             next = self.lexer.next_token_peek();
         }
 
         AstLogicalAndExpr { first, rest }
+    }
+
+    fn parse_bitwise_or_expr(&mut self) -> AstBitwiseOrExpr {
+        let first = self.parse_bitwise_xor_expr();
+        let mut rest = Vec::new();
+
+        let mut next = self.lexer.next_token_peek();
+        while matches!(next, TokenType::BitwiseOr) {
+            self.advance();
+
+            let next_expr = self.parse_bitwise_xor_expr();
+            rest.push((Binop::BitwiseOr, next_expr));
+
+            next = self.lexer.next_token_peek();
+        }
+
+        AstBitwiseOrExpr { first, rest }
+    }
+
+    fn parse_bitwise_xor_expr(&mut self) -> AstBitwiseXorExpr {
+        let first = self.parse_bitwise_and_expr();
+        let mut rest = Vec::new();
+
+        let mut next = self.lexer.next_token_peek();
+        while matches!(next, TokenType::BitwiseXor) {
+            self.advance();
+
+            let next_expr = self.parse_bitwise_and_expr();
+            rest.push((Binop::BitwiseXor, next_expr));
+
+            next = self.lexer.next_token_peek();
+        }
+
+        AstBitwiseXorExpr { first, rest }
+    }
+
+    fn parse_bitwise_and_expr(&mut self) -> AstBitwiseAndExpr {
+        let first = self.parse_equality_expr();
+        let mut rest = Vec::new();
+
+        let mut next = self.lexer.next_token_peek();
+        while matches!(next, TokenType::BitwiseAnd) {
+            self.advance();
+
+            let next_expr = self.parse_equality_expr();
+            rest.push((Binop::BitwiseAnd, next_expr));
+
+            next = self.lexer.next_token_peek();
+        }
+
+        AstBitwiseAndExpr { first, rest }
     }
 
     fn parse_equality_expr(&mut self) -> AstEqualityExpr {
@@ -173,7 +224,7 @@ impl Parser {
     }
 
     fn parse_additive_expr(&mut self) -> AstAdditiveExpr {
-        let first = self.parse_term();
+        let first = self.parse_shift_expr();
         let mut rest = Vec::new();
 
         let mut next = self.lexer.next_token_peek();
@@ -185,8 +236,8 @@ impl Parser {
                 _ => Binop::Sub,
             };
 
-            let next_term = self.parse_term();
-            rest.push((binop, next_term));
+            let next_exp = self.parse_shift_expr();
+            rest.push((binop, next_exp));
 
             next = self.lexer.next_token_peek();
         }
@@ -194,16 +245,39 @@ impl Parser {
         AstAdditiveExpr { first, rest }
     }
 
+    fn parse_shift_expr(&mut self) -> AstShiftExpr {
+        let first = self.parse_term();
+        let mut rest = Vec::new();
+
+        let mut next = self.lexer.next_token_peek();
+        while matches!(next, TokenType::LShift | TokenType::RShift) {
+            self.advance();
+
+            let binop = match next {
+                TokenType::LShift => Binop::LShift,
+                _ => Binop::RShift,
+            };
+
+            let next_exp = self.parse_term();
+            rest.push((binop, next_exp));
+
+            next = self.lexer.next_token_peek();
+        }
+
+        AstShiftExpr { first, rest }
+    }
+
     fn parse_term(&mut self) -> AstTerm {
         let first = self.parse_factor();
         let mut rest = Vec::new();
 
         let mut next = self.lexer.next_token_peek();
-        while matches!(next, TokenType::Mul | TokenType::Div) {
+        while matches!(next, TokenType::Mul | TokenType::Div | TokenType::Mod) {
             self.advance();
 
             let binop = match next {
                 TokenType::Mul => Binop::Mul,
+                TokenType::Mod => Binop::Mod,
                 _ => Binop::Div,
             };
 

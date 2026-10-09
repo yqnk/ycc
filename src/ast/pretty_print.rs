@@ -36,11 +36,17 @@ impl Visitor for AstPrettyPrinter {
     type Program = ();
     type Func = ();
     type Statement = ();
+
     type Expr = ();
     type LogicalAndExpr = ();
     type EqualityExpr = ();
     type RelationalExpr = ();
     type AdditiveExpr = ();
+    type ShiftExpr = ();
+    type BitwiseOrExpr = ();
+    type BitwiseXorExpr = ();
+    type BitwiseAndExpr = ();
+
     type Term = ();
     type Factor = ();
 
@@ -70,10 +76,10 @@ impl Visitor for AstPrettyPrinter {
         iprintln!(self, "EXPR (");
         self.nested(|pp| {
             expr.first.accept(pp);
-            for (op, laexp) in &expr.rest {
+            for (op, exp) in &expr.rest {
                 assert!(op.eq(&Binop::LogicalOr));
                 iprintln!(pp, format!("BINOP {}", op.symbol()));
-                laexp.accept(pp);
+                exp.accept(pp);
             }
         });
         iprintln!(self, ")");
@@ -86,10 +92,58 @@ impl Visitor for AstPrettyPrinter {
         iprintln!(self, "LOGICAL_AND_EXPR (");
         self.nested(|pp| {
             expr.first.accept(pp);
-            for (op, eqexpr) in &expr.rest {
+            for (op, exp) in &expr.rest {
                 assert!(op.eq(&Binop::LogicalAnd));
                 iprintln!(pp, format!("BINOP {}", op.symbol()));
-                eqexpr.accept(pp);
+                exp.accept(pp);
+            }
+        });
+        iprintln!(self, ")");
+    }
+
+    fn visit_bitwise_or_expr(
+        &mut self,
+        expr: &super::nodes::AstBitwiseOrExpr,
+    ) -> Self::BitwiseOrExpr {
+        iprintln!(self, "BITWISE_OR_EXPR (");
+        self.nested(|pp| {
+            expr.first.accept(pp);
+            for (op, exp) in &expr.rest {
+                assert!(op.eq(&Binop::BitwiseOr));
+                iprintln!(pp, format!("BINOP {}", op.symbol()));
+                exp.accept(pp);
+            }
+        });
+        iprintln!(self, ")");
+    }
+
+    fn visit_bitwise_xor_expr(
+        &mut self,
+        expr: &super::nodes::AstBitwiseXorExpr,
+    ) -> Self::BitwiseXorExpr {
+        iprintln!(self, "BITWISE_XOR_EXPR (");
+        self.nested(|pp| {
+            expr.first.accept(pp);
+            for (op, exp) in &expr.rest {
+                assert!(op.eq(&Binop::BitwiseXor));
+                iprintln!(pp, format!("BINOP {}", op.symbol()));
+                exp.accept(pp);
+            }
+        });
+        iprintln!(self, ")");
+    }
+
+    fn visit_bitwise_and_expr(
+        &mut self,
+        expr: &super::nodes::AstBitwiseAndExpr,
+    ) -> Self::BitwiseAndExpr {
+        iprintln!(self, "BITWISE_AND_EXPR (");
+        self.nested(|pp| {
+            expr.first.accept(pp);
+            for (op, exp) in &expr.rest {
+                assert!(op.eq(&Binop::BitwiseAnd));
+                iprintln!(pp, format!("BINOP {}", op.symbol()));
+                exp.accept(pp);
             }
         });
         iprintln!(self, ")");
@@ -99,10 +153,10 @@ impl Visitor for AstPrettyPrinter {
         iprintln!(self, "EQUALITY_EXPR (");
         self.nested(|pp| {
             expr.first.accept(pp);
-            for (op, relexpr) in &expr.rest {
+            for (op, exp) in &expr.rest {
                 assert!(matches!(op, Binop::EqualTo | Binop::NotEqualTo));
                 iprintln!(pp, format!("BINOP {}", op.symbol()));
-                relexpr.accept(pp);
+                exp.accept(pp);
             }
         });
         iprintln!(self, ")");
@@ -115,7 +169,7 @@ impl Visitor for AstPrettyPrinter {
         iprintln!(self, "RELATIONAL_EXPR (");
         self.nested(|pp| {
             expr.first.accept(pp);
-            for (op, addexpr) in &expr.rest {
+            for (op, exp) in &expr.rest {
                 assert!(matches!(
                     op,
                     Binop::LessThan
@@ -124,7 +178,7 @@ impl Visitor for AstPrettyPrinter {
                         | Binop::GreaterThanOrEqualTo
                 ));
                 iprintln!(pp, format!("BINOP {}", op.symbol()));
-                addexpr.accept(pp);
+                exp.accept(pp);
             }
         });
         iprintln!(self, ")");
@@ -134,10 +188,24 @@ impl Visitor for AstPrettyPrinter {
         iprintln!(self, "ADDITIVE_EXPR (");
         self.nested(|pp| {
             expr.first.accept(pp);
-            for (op, term) in &expr.rest {
+            for (op, exp) in &expr.rest {
                 assert!(matches!(op, Binop::Add | Binop::Sub));
                 iprintln!(pp, format!("BINOP {}", op.symbol()));
-                term.accept(pp);
+                exp.accept(pp);
+            }
+        });
+        iprintln!(self, ")");
+    }
+
+    fn visit_shift_expr(&mut self, expr: &super::AstShiftExpr) -> Self::ShiftExpr {
+        iprintln!(self, "SHIFT_EXPR (");
+        self.nested(|pp| {
+            expr.first.accept(pp);
+
+            for (op, exp) in &expr.rest {
+                assert!(matches!(op, Binop::LShift | Binop::RShift));
+                iprintln!(pp, format!("BINOP {}", op.symbol()));
+                exp.accept(pp);
             }
         });
         iprintln!(self, ")");
@@ -148,6 +216,7 @@ impl Visitor for AstPrettyPrinter {
         self.nested(|pp| {
             term.first.accept(pp);
             for (op, factor) in &term.rest {
+                assert!(matches!(op, Binop::Mul | Binop::Div | Binop::Mod));
                 iprintln!(pp, format!("BINOP {}", op.symbol()));
                 factor.accept(pp);
             }
