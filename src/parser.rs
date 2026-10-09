@@ -1,6 +1,4 @@
-use crate::ast::{
-    AstExpr, AstFactor, AstFunc, AstProgram, AstStatement, AstTerm, Binop, Type, Unop,
-};
+use crate::ast::*;
 use crate::lexer::{Keyword, Lexer, TokenType};
 
 #[derive(Debug)]
@@ -89,6 +87,92 @@ impl Parser {
     }
 
     fn parse_expr(&mut self) -> AstExpr {
+        let first = self.parse_logical_and_expr();
+        let mut rest = Vec::new();
+
+        let mut next = self.lexer.next_token_peek();
+        while matches!(next, TokenType::LogicalOr) {
+            self.advance();
+
+            let next_expr = self.parse_logical_and_expr();
+            rest.push((Binop::LogicalOr, next_expr));
+
+            next = self.lexer.next_token_peek();
+        }
+
+        AstExpr { first, rest }
+    }
+
+    fn parse_logical_and_expr(&mut self) -> AstLogicalAndExpr {
+        let first = self.parse_equality_expr();
+        let mut rest = Vec::new();
+
+        let mut next = self.lexer.next_token_peek();
+        while matches!(next, TokenType::LogicalAnd) {
+            self.advance();
+
+            let next_expr = self.parse_equality_expr();
+            rest.push((Binop::LogicalAnd, next_expr));
+
+            next = self.lexer.next_token_peek();
+        }
+
+        AstLogicalAndExpr { first, rest }
+    }
+
+    fn parse_equality_expr(&mut self) -> AstEqualityExpr {
+        let first = self.parse_relational_expr();
+        let mut rest = Vec::new();
+
+        let mut next = self.lexer.next_token_peek();
+        while matches!(next, TokenType::EqualTo | TokenType::NotEqualTo) {
+            self.advance();
+
+            let binop = match next {
+                TokenType::EqualTo => Binop::EqualTo,
+                _ => Binop::NotEqualTo,
+            };
+
+            let next_expr = self.parse_relational_expr();
+            rest.push((binop, next_expr));
+
+            next = self.lexer.next_token_peek();
+        }
+
+        AstEqualityExpr { first, rest }
+    }
+
+    fn parse_relational_expr(&mut self) -> AstRelationalExpr {
+        let first = self.parse_additive_expr();
+        let mut rest = Vec::new();
+
+        let mut next = self.lexer.next_token_peek();
+        while matches!(
+            next,
+            TokenType::LessThan
+                | TokenType::LessThanOrEqualTo
+                | TokenType::GreaterThan
+                | TokenType::GreaterThanOrEqualTo
+        ) {
+            self.advance();
+
+            let binop = match next {
+                TokenType::LessThan => Binop::LessThan,
+                TokenType::LessThanOrEqualTo => Binop::LessThanOrEqualTo,
+                TokenType::GreaterThan => Binop::GreaterThan,
+                _ => Binop::GreaterThanOrEqualTo,
+            };
+
+            let next_expr = self.parse_additive_expr();
+            rest.push((binop, next_expr));
+
+            next = self.lexer.next_token_peek();
+        }
+
+        AstRelationalExpr { first, rest }
+    }
+
+    fn parse_additive_expr(&mut self) -> AstAdditiveExpr {
         let first = self.parse_term();
         let mut rest = Vec::new();
 
@@ -107,7 +191,7 @@ impl Parser {
             next = self.lexer.next_token_peek();
         }
 
-        AstExpr { first, rest }
+        AstAdditiveExpr { first, rest }
     }
 
     fn parse_term(&mut self) -> AstTerm {

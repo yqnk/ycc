@@ -41,6 +41,15 @@ impl Lexer {
         }
     }
 
+    fn consume_if(&mut self, expected: char) -> bool {
+        if self.peek() == Some(expected) {
+            self.pos += 1;
+            true
+        } else {
+            false
+        }
+    }
+
     fn lex_while(&mut self, pred: impl Fn(char) -> bool) -> String {
         let start = self.pos;
 
@@ -62,13 +71,40 @@ impl Lexer {
             // Unop
             Some('-') => TokenType::Sub,
             Some('~') => TokenType::BitwiseComplement,
-            Some('!') => TokenType::LogicalNegation,
+            Some('!') => {
+                if self.consume_if('=') {
+                    TokenType::NotEqualTo
+                } else {
+                    TokenType::LogicalNegation
+                }
+            }
 
             // Binop
             Some('+') => TokenType::Add,
             Some('*') => TokenType::Mul,
             Some('/') => TokenType::Div,
-            _ => unreachable!("next_token_operator called on a non-operator"),
+            Some('<') => {
+                if self.consume_if('=') {
+                    TokenType::LessThanOrEqualTo
+                } else {
+                    TokenType::LessThan
+                }
+            }
+            Some('>') => {
+                if self.consume_if('=') {
+                    TokenType::GreaterThanOrEqualTo
+                } else {
+                    TokenType::GreaterThan
+                }
+            }
+
+            // Double-char only
+            Some('&') if self.consume_if('&') => TokenType::LogicalAnd,
+            Some('|') if self.consume_if('|') => TokenType::LogicalOr,
+            Some('=') if self.consume_if('=') => TokenType::EqualTo,
+
+            Some(c) => panic!("unexpected operator '{}' at offset {}", c, self.pos - 1),
+            None => unreachable!("next_token_operator called at end of input"),
         }
     }
 

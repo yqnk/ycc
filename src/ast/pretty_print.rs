@@ -1,3 +1,5 @@
+use crate::ast::Binop;
+
 use super::nodes::{AstExpr, AstFactor, AstFunc, AstProgram, AstStatement, AstTerm};
 use super::visitor::Visitor;
 
@@ -35,6 +37,10 @@ impl Visitor for AstPrettyPrinter {
     type Func = ();
     type Statement = ();
     type Expr = ();
+    type LogicalAndExpr = ();
+    type EqualityExpr = ();
+    type RelationalExpr = ();
+    type AdditiveExpr = ();
     type Term = ();
     type Factor = ();
 
@@ -64,7 +70,72 @@ impl Visitor for AstPrettyPrinter {
         iprintln!(self, "EXPR (");
         self.nested(|pp| {
             expr.first.accept(pp);
+            for (op, laexp) in &expr.rest {
+                assert!(op.eq(&Binop::LogicalOr));
+                iprintln!(pp, format!("BINOP {}", op.symbol()));
+                laexp.accept(pp);
+            }
+        });
+        iprintln!(self, ")");
+    }
+
+    fn visit_logical_and_expr(
+        &mut self,
+        expr: &super::nodes::AstLogicalAndExpr,
+    ) -> Self::LogicalAndExpr {
+        iprintln!(self, "LOGICAL_AND_EXPR (");
+        self.nested(|pp| {
+            expr.first.accept(pp);
+            for (op, eqexpr) in &expr.rest {
+                assert!(op.eq(&Binop::LogicalAnd));
+                iprintln!(pp, format!("BINOP {}", op.symbol()));
+                eqexpr.accept(pp);
+            }
+        });
+        iprintln!(self, ")");
+    }
+
+    fn visit_equality_expr(&mut self, expr: &super::nodes::AstEqualityExpr) -> Self::EqualityExpr {
+        iprintln!(self, "EQUALITY_EXPR (");
+        self.nested(|pp| {
+            expr.first.accept(pp);
+            for (op, relexpr) in &expr.rest {
+                assert!(matches!(op, Binop::EqualTo | Binop::NotEqualTo));
+                iprintln!(pp, format!("BINOP {}", op.symbol()));
+                relexpr.accept(pp);
+            }
+        });
+        iprintln!(self, ")");
+    }
+
+    fn visit_relational_expr(
+        &mut self,
+        expr: &super::nodes::AstRelationalExpr,
+    ) -> Self::RelationalExpr {
+        iprintln!(self, "RELATIONAL_EXPR (");
+        self.nested(|pp| {
+            expr.first.accept(pp);
+            for (op, addexpr) in &expr.rest {
+                assert!(matches!(
+                    op,
+                    Binop::LessThan
+                        | Binop::GreaterThan
+                        | Binop::LessThanOrEqualTo
+                        | Binop::GreaterThanOrEqualTo
+                ));
+                iprintln!(pp, format!("BINOP {}", op.symbol()));
+                addexpr.accept(pp);
+            }
+        });
+        iprintln!(self, ")");
+    }
+
+    fn visit_additive_expr(&mut self, expr: &super::nodes::AstAdditiveExpr) -> Self::AdditiveExpr {
+        iprintln!(self, "ADDITIVE_EXPR (");
+        self.nested(|pp| {
+            expr.first.accept(pp);
             for (op, term) in &expr.rest {
+                assert!(matches!(op, Binop::Add | Binop::Sub));
                 iprintln!(pp, format!("BINOP {}", op.symbol()));
                 term.accept(pp);
             }

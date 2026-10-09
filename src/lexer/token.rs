@@ -13,9 +13,17 @@ pub enum TokenType {
     BitwiseComplement,
 
     // Binop
-    Add,
+    Add, // Also an Unop btw...
     Mul,
     Div,
+    LogicalAnd,
+    LogicalOr,
+    EqualTo,
+    NotEqualTo,
+    LessThan,
+    LessThanOrEqualTo,
+    GreaterThan,
+    GreaterThanOrEqualTo,
 
     Identifier(String),
     Keyword(Keyword),
@@ -29,7 +37,21 @@ pub enum TokenType {
 pub fn is_operator(c: char) -> bool {
     matches!(
         c,
-        '{' | '}' | '(' | ')' | ';' | '-' | '~' | '!' | '+' | '*' | '/'
+        '{' | '}'
+            | '('
+            | ')'
+            | ';'
+            | '-'
+            | '~'
+            | '!'
+            | '+'
+            | '*'
+            | '/'
+            | '&'
+            | '|'
+            | '='
+            | '<'
+            | '>'
     )
 }
 
@@ -62,6 +84,19 @@ impl TokenType {
     }
 
     pub fn is_binop(&self) -> bool {
-        matches!(self, TokenType::Add | TokenType::Mul | TokenType::Div)
+        matches!(
+            self,
+            TokenType::Add
+                | TokenType::Mul
+                | TokenType::Div
+                | TokenType::LogicalAnd
+                | TokenType::LogicalOr
+                | TokenType::EqualTo
+                | TokenType::NotEqualTo
+                | TokenType::LessThan
+                | TokenType::LessThanOrEqualTo
+                | TokenType::GreaterThan
+                | TokenType::GreaterThanOrEqualTo
+        )
     }
 }

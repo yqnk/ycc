@@ -5,11 +5,20 @@ pub enum Type {
     Int,
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub enum Binop {
     Add,
     Sub,
     Mul,
     Div,
+    LogicalAnd,
+    LogicalOr,
+    EqualTo,
+    NotEqualTo,
+    LessThan,
+    LessThanOrEqualTo,
+    GreaterThan,
+    GreaterThanOrEqualTo,
 }
 
 pub enum Unop {
@@ -35,6 +44,14 @@ impl Binop {
             Binop::Sub => "-",
             Binop::Mul => "*",
             Binop::Div => "/",
+            Binop::LogicalOr => "||",
+            Binop::LogicalAnd => "&&",
+            Binop::EqualTo => "==",
+            Binop::NotEqualTo => "!=",
+            Binop::LessThan => "<",
+            Binop::LessThanOrEqualTo => "<=",
+            Binop::GreaterThan => ">",
+            Binop::GreaterThanOrEqualTo => ">=",
         }
     }
 }
