@@ -104,9 +104,8 @@ impl Lexer {
                 }
             }
 
-            // Double-char only
             Some('&') => {
-                if self.consume_if('|') {
+                if self.consume_if('&') {
                     return TokenType::LogicalAnd;
                 } else {
                     return TokenType::BitwiseAnd;

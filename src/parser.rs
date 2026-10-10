@@ -87,245 +87,48 @@ impl Parser {
     }
 
     fn parse_expr(&mut self) -> AstExpr {
-        let first = self.parse_logical_and_expr();
-        let mut rest = Vec::new();
-
-        let mut next = self.lexer.next_token_peek();
-        while matches!(next, TokenType::LogicalOr) {
-            self.advance();
-
-            let next_expr = self.parse_logical_and_expr();
-            rest.push((Binop::LogicalOr, next_expr));
-
-            next = self.lexer.next_token_peek();
-        }
-
-        AstExpr { first, rest }
+        // 1 is the highest precedence binary operator, defined in type.rs
+        self.parse_binary(1)
     }
 
-    fn parse_logical_and_expr(&mut self) -> AstLogicalAndExpr {
-        let first = self.parse_bitwise_or_expr();
-        let mut rest = Vec::new();
+    fn parse_binary(&mut self, min_power: u8) -> AstExpr {
+        let mut lhs = self.parse_factor();
 
-        let mut next = self.lexer.next_token_peek();
-        while matches!(next, TokenType::LogicalAnd) {
+        while let Some((op, power)) = Binop::from_token(&self.lexer.next_token_peek()) {
+            if power < min_power {
+                break;
+            }
             self.advance();
 
-            let next_expr = self.parse_bitwise_or_expr();
-            rest.push((Binop::LogicalAnd, next_expr));
-
-            next = self.lexer.next_token_peek();
-        }
-
-        AstLogicalAndExpr { first, rest }
-    }
-
-    fn parse_bitwise_or_expr(&mut self) -> AstBitwiseOrExpr {
-        let first = self.parse_bitwise_xor_expr();
-        let mut rest = Vec::new();
-
-        let mut next = self.lexer.next_token_peek();
-        while matches!(next, TokenType::BitwiseOr) {
-            self.advance();
-
-            let next_expr = self.parse_bitwise_xor_expr();
-            rest.push((Binop::BitwiseOr, next_expr));
-
-            next = self.lexer.next_token_peek();
-        }
-
-        AstBitwiseOrExpr { first, rest }
-    }
-
-    fn parse_bitwise_xor_expr(&mut self) -> AstBitwiseXorExpr {
-        let first = self.parse_bitwise_and_expr();
-        let mut rest = Vec::new();
-
-        let mut next = self.lexer.next_token_peek();
-        while matches!(next, TokenType::BitwiseXor) {
-            self.advance();
-
-            let next_expr = self.parse_bitwise_and_expr();
-            rest.push((Binop::BitwiseXor, next_expr));
-
-            next = self.lexer.next_token_peek();
-        }
-
-        AstBitwiseXorExpr { first, rest }
-    }
-
-    fn parse_bitwise_and_expr(&mut self) -> AstBitwiseAndExpr {
-        let first = self.parse_equality_expr();
-        let mut rest = Vec::new();
-
-        let mut next = self.lexer.next_token_peek();
-        while matches!(next, TokenType::BitwiseAnd) {
-            self.advance();
-
-            let next_expr = self.parse_equality_expr();
-            rest.push((Binop::BitwiseAnd, next_expr));
-
-            next = self.lexer.next_token_peek();
-        }
-
-        AstBitwiseAndExpr { first, rest }
-    }
-
-    fn parse_equality_expr(&mut self) -> AstEqualityExpr {
-        let first = self.parse_relational_expr();
-        let mut rest = Vec::new();
-
-        let mut next = self.lexer.next_token_peek();
-        while matches!(next, TokenType::EqualTo | TokenType::NotEqualTo) {
-            self.advance();
-
-            let binop = match next {
-                TokenType::EqualTo => Binop::EqualTo,
-                _ => Binop::NotEqualTo,
+            // power + 1: every C binary operator is left-associative
+            let rhs = self.parse_binary(power + 1);
+            lhs = AstExpr::Binary {
+                op,
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs),
             };
-
-            let next_expr = self.parse_relational_expr();
-            rest.push((binop, next_expr));
-
-            next = self.lexer.next_token_peek();
         }
 
-        AstEqualityExpr { first, rest }
+        lhs
     }
 
-    fn parse_relational_expr(&mut self) -> AstRelationalExpr {
-        let first = self.parse_additive_expr();
-        let mut rest = Vec::new();
+    fn parse_factor(&mut self) -> AstExpr {
+        let token = self.advance();
 
-        let mut next = self.lexer.next_token_peek();
-        while matches!(
-            next,
-            TokenType::LessThan
-                | TokenType::LessThanOrEqualTo
-                | TokenType::GreaterThan
-                | TokenType::GreaterThanOrEqualTo
-        ) {
-            self.advance();
-
-            let binop = match next {
-                TokenType::LessThan => Binop::LessThan,
-                TokenType::LessThanOrEqualTo => Binop::LessThanOrEqualTo,
-                TokenType::GreaterThan => Binop::GreaterThan,
-                _ => Binop::GreaterThanOrEqualTo,
+        if let Some(op) = Unop::from_token(&token) {
+            return AstExpr::Unary {
+                op,
+                operand: Box::new(self.parse_factor()),
             };
-
-            let next_expr = self.parse_additive_expr();
-            rest.push((binop, next_expr));
-
-            next = self.lexer.next_token_peek();
         }
 
-        AstRelationalExpr { first, rest }
-    }
-
-    fn parse_additive_expr(&mut self) -> AstAdditiveExpr {
-        let first = self.parse_shift_expr();
-        let mut rest = Vec::new();
-
-        let mut next = self.lexer.next_token_peek();
-        while matches!(next, TokenType::Add | TokenType::Sub) {
-            self.advance();
-
-            let binop = match next {
-                TokenType::Add => Binop::Add,
-                _ => Binop::Sub,
-            };
-
-            let next_exp = self.parse_shift_expr();
-            rest.push((binop, next_exp));
-
-            next = self.lexer.next_token_peek();
-        }
-
-        AstAdditiveExpr { first, rest }
-    }
-
-    fn parse_shift_expr(&mut self) -> AstShiftExpr {
-        let first = self.parse_term();
-        let mut rest = Vec::new();
-
-        let mut next = self.lexer.next_token_peek();
-        while matches!(next, TokenType::LShift | TokenType::RShift) {
-            self.advance();
-
-            let binop = match next {
-                TokenType::LShift => Binop::LShift,
-                _ => Binop::RShift,
-            };
-
-            let next_exp = self.parse_term();
-            rest.push((binop, next_exp));
-
-            next = self.lexer.next_token_peek();
-        }
-
-        AstShiftExpr { first, rest }
-    }
-
-    fn parse_term(&mut self) -> AstTerm {
-        let first = self.parse_factor();
-        let mut rest = Vec::new();
-
-        let mut next = self.lexer.next_token_peek();
-        while matches!(next, TokenType::Mul | TokenType::Div | TokenType::Mod) {
-            self.advance();
-
-            let binop = match next {
-                TokenType::Mul => Binop::Mul,
-                TokenType::Mod => Binop::Mod,
-                _ => Binop::Div,
-            };
-
-            let next_factor = self.parse_factor();
-            rest.push((binop, next_factor));
-
-            next = self.lexer.next_token_peek();
-        }
-
-        AstTerm { first, rest }
-    }
-
-    fn parse_factor(&mut self) -> AstFactor {
-        match self.advance() {
+        match token {
             TokenType::LParen => {
                 let exp = self.parse_expr();
                 let _rpar = self.advance_match(|t| *t == TokenType::RParen);
-                AstFactor::Paren(Box::new(exp))
+                exp
             }
-            TokenType::Sub => {
-                let factor = self.parse_factor();
-                AstFactor::Unary {
-                    op: Unop::Negation,
-                    factor: Box::new(factor),
-                }
-            }
-            TokenType::Add => {
-                let factor = self.parse_factor();
-                AstFactor::Unary {
-                    op: Unop::Addition,
-                    factor: Box::new(factor),
-                }
-            }
-            TokenType::BitwiseComplement => {
-                let factor = self.parse_factor();
-                AstFactor::Unary {
-                    op: Unop::BitwiseComplement,
-                    factor: Box::new(factor),
-                }
-            }
-            TokenType::LogicalNegation => {
-                let factor = self.parse_factor();
-                AstFactor::Unary {
-                    op: Unop::LogicalNegation,
-                    factor: Box::new(factor),
-                }
-            }
-            TokenType::Constant(value) => AstFactor::Int(value),
+            TokenType::Constant(value) => AstExpr::Int(value),
             _ => unimplemented!("unknown factor token"),
         }
     }
