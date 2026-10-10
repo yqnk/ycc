@@ -45,7 +45,11 @@ impl Visitor for AstPrettyPrinter {
         iprintln!(self, format!("FUN {:?} {}", func.ret_type, func.name));
         iprintln!(self, "body:");
 
-        self.nested(|pp| func.statement.accept(pp));
+        self.nested(|pp| {
+            for statement in &func.statements {
+                statement.accept(pp);
+            }
+        });
     }
 
     fn visit_statement(&mut self, statement: &AstStatement) -> Self::Statement {

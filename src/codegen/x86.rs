@@ -40,6 +40,16 @@ impl X86Backend {
         }
     }
 
+    pub fn prologue(&mut self) {
+        self.instr("pushq", "%rbp");
+        self.instr("movq", "%rsp, %rbp");
+    }
+
+    pub fn epilogue(&mut self) {
+        self.instr("movq", "%rbp, %rsp");
+        self.instr("popq", "%rbp");
+    }
+
     // && and || are lazy evaluated
     fn short_circuit(&mut self, is_or: bool, lhs: &AstExpr, rhs: &AstExpr) {
         let id = self.next_label_id();
@@ -125,13 +135,18 @@ impl Visitor for X86Backend {
     fn visit_func(&mut self, func: &AstFunc) {
         self.directive(&format!(".globl {}", func.name));
         self.label(&func.name);
-        func.statement.accept(self);
+        self.prologue();
+
+        for statement in &func.statements {
+            statement.accept(self);
+        }
     }
 
     fn visit_statement(&mut self, statement: &AstStatement) {
         match statement {
             AstStatement::Return { exp } => {
                 exp.accept(self);
+                self.epilogue();
                 self.instr("ret", "");
             }
         }

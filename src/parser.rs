@@ -63,14 +63,20 @@ impl Parser {
         let _token_lpar = self.advance_match(|t| *t == TokenType::LParen);
         let _token_rpar = self.advance_match(|t| *t == TokenType::RParen);
         let _token_lbracket = self.advance_match(|t| *t == TokenType::LBracket);
-        let statement = self.parse_statement();
+
+        let mut statements = Vec::new();
+
+        while self.lexer.next_token_peek() != TokenType::RBracket {
+            statements.push(self.parse_statement());
+        }
+
         let _token_rbracket = self.advance_match(|t| *t == TokenType::RBracket);
 
         if let TokenType::Identifier(name) = token_name {
             return AstFunc {
                 ret_type,
                 name,
-                statement,
+                statements,
             };
         }
 

@@ -7,15 +7,14 @@ pub struct AstProgram {
 pub struct AstFunc {
     pub ret_type: Type,
     pub name: String,
-    pub statement: AstStatement,
+    pub statements: Vec<AstStatement>,
 }
 
 pub enum AstStatement {
     Return { exp: AstExpr },
 }
 
-// Precedence is encoded by the tree shape, not by one node type per level:
-// see Binop::from_token for the binding powers the parser climbs.
+// Precedence is encoded by the tree shape, not by one node type per level
 pub enum AstExpr {
     Binary {
         op: Binop,
