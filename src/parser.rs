@@ -85,11 +85,25 @@ impl Parser {
 
     // this only works for Return(Int);
     fn parse_statement(&mut self) -> AstStatement {
-        let _token_return = self.advance_match(|t| *t == TokenType::Keyword(Keyword::Return));
-        let exp = self.parse_expr();
-        let _token_semi = self.advance_match(|t| t.is_semi());
+        let token = self.lexer.next_token_peek();
 
-        AstStatement::Return { exp }
+        match token {
+            TokenType::Keyword(Keyword::Return) => {
+                self.advance();
+
+                let exp = self.parse_expr();
+                let _semi = self.advance_match(|t| t.is_semi());
+
+                AstStatement::Return { exp }
+            }
+            TokenType::Keyword(Keyword::Int) => {
+                todo!("Add int assignment parsing!")
+            }
+            _ => {
+                let exp = self.parse_expr();
+                AstStatement::Expr { exp }
+            }
+        }
     }
 
     fn parse_expr(&mut self) -> AstExpr {

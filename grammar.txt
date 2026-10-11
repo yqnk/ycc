@@ -6,7 +6,8 @@ Might not be the correct one, and will need to be checked later.
 <statement> ::= "return" <exp> ";"
               | <exp> ";"
               | "int" <id> [ = <exp>] ";" 
-<exp> ::= <exp> <binop> <exp>
+<exp> ::= <id> "=" <exp>
+        | <exp> <binop> <exp>
         | <unary_op> <exp>
         | "(" <exp> ")"
         | <int>
@@ -30,3 +31,4 @@ precedence for binops:
   10 *  /  %
 
 All binary operators are left-associative.
+All kinds of assignments are right-associative.

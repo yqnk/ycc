@@ -25,6 +25,7 @@ pub enum Binop {
     BitwiseOr,
     BitwiseXor,
     BitwiseAnd,
+    Assignment,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
@@ -49,24 +50,25 @@ impl Binop {
         use TokenType as T;
 
         Some(match token {
-            T::LogicalOr => (Binop::LogicalOr, 1),
-            T::LogicalAnd => (Binop::LogicalAnd, 2),
-            T::BitwiseOr => (Binop::BitwiseOr, 3),
-            T::BitwiseXor => (Binop::BitwiseXor, 4),
-            T::BitwiseAnd => (Binop::BitwiseAnd, 5),
-            T::EqualTo => (Binop::EqualTo, 6),
-            T::NotEqualTo => (Binop::NotEqualTo, 6),
-            T::LessThan => (Binop::LessThan, 7),
-            T::LessThanOrEqualTo => (Binop::LessThanOrEqualTo, 7),
-            T::GreaterThan => (Binop::GreaterThan, 7),
-            T::GreaterThanOrEqualTo => (Binop::GreaterThanOrEqualTo, 7),
-            T::LShift => (Binop::LShift, 8),
-            T::RShift => (Binop::RShift, 8),
-            T::Add => (Binop::Add, 9),
-            T::Sub => (Binop::Sub, 9),
-            T::Mul => (Binop::Mul, 10),
-            T::Div => (Binop::Div, 10),
-            T::Mod => (Binop::Mod, 10),
+            T::Assignment => (Binop::Assignment, 1),
+            T::LogicalOr => (Binop::LogicalOr, 2),
+            T::LogicalAnd => (Binop::LogicalAnd, 3),
+            T::BitwiseOr => (Binop::BitwiseOr, 4),
+            T::BitwiseXor => (Binop::BitwiseXor, 5),
+            T::BitwiseAnd => (Binop::BitwiseAnd, 6),
+            T::EqualTo => (Binop::EqualTo, 7),
+            T::NotEqualTo => (Binop::NotEqualTo, 7),
+            T::LessThan => (Binop::LessThan, 8),
+            T::LessThanOrEqualTo => (Binop::LessThanOrEqualTo, 8),
+            T::GreaterThan => (Binop::GreaterThan, 8),
+            T::GreaterThanOrEqualTo => (Binop::GreaterThanOrEqualTo, 8),
+            T::LShift => (Binop::LShift, 9),
+            T::RShift => (Binop::RShift, 9),
+            T::Add => (Binop::Add, 10),
+            T::Sub => (Binop::Sub, 10),
+            T::Mul => (Binop::Mul, 11),
+            T::Div => (Binop::Div, 11),
+            T::Mod => (Binop::Mod, 11),
             _ => return None,
         })
     }
@@ -91,6 +93,7 @@ impl Binop {
             Binop::BitwiseOr => "|",
             Binop::BitwiseXor => "^",
             Binop::BitwiseAnd => "&",
+            Binop::Assignment => "=",
         }
     }
 }

@@ -1,3 +1,5 @@
+use crate::ast::Type;
+
 use super::nodes::{AstExpr, AstFunc, AstProgram, AstStatement};
 use super::visitor::Visitor;
 
@@ -57,6 +59,29 @@ impl Visitor for AstPrettyPrinter {
             AstStatement::Return { exp } => {
                 iprintln!(self, "RETURN (");
                 self.nested(|pp| exp.accept(pp));
+                iprintln!(self, ")");
+            }
+            AstStatement::Expr { exp } => {
+                self.nested(|pp| exp.accept(pp));
+            }
+            AstStatement::VarDec {
+                var_type,
+                name,
+                exp,
+            } => {
+                iprintln!(self, "ASSIGN (");
+
+                self.nested(|pp| {
+                    iprintln!(pp, format!("{:?} {}", var_type, name));
+                    match exp {
+                        Some(e) => {
+                            iprintln!(pp, "=");
+                            e.accept(pp)
+                        }
+                        None => iprintln!(pp, ";"),
+                    };
+                });
+
                 iprintln!(self, ")");
             }
         }

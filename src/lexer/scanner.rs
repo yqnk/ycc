@@ -122,7 +122,13 @@ impl Lexer {
 
             Some('^') => TokenType::BitwiseXor,
 
-            Some('=') if self.consume_if('=') => TokenType::EqualTo,
+            Some('=') => {
+                if self.consume_if('=') {
+                    return TokenType::EqualTo;
+                } else {
+                    return TokenType::Assignment;
+                }
+            }
 
             Some(c) => panic!("unexpected operator '{}' at offset {}", c, self.pos - 1),
             None => unreachable!("next_token_operator called at end of input"),

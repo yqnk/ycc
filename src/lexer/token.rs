@@ -33,6 +33,9 @@ pub enum TokenType {
     LShift,
     RShift,
 
+    // Assign
+    Assignment,
+
     Identifier(String),
     Keyword(Keyword),
     Constant(i32),

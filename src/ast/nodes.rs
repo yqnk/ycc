@@ -11,7 +11,17 @@ pub struct AstFunc {
 }
 
 pub enum AstStatement {
-    Return { exp: AstExpr },
+    Return {
+        exp: AstExpr,
+    },
+    Expr {
+        exp: AstExpr,
+    },
+    VarDec {
+        var_type: Type,
+        name: String,
+        exp: Option<AstExpr>,
+    },
 }
 
 // Precedence is encoded by the tree shape, not by one node type per level
