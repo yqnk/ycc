@@ -4,7 +4,6 @@ use crate::lexer::{Keyword, Lexer, TokenType};
 #[derive(Debug)]
 pub struct Parser {
     pub cur_token: TokenType,
-
     pub lexer: Lexer,
 }
 
@@ -121,7 +120,10 @@ impl Parser {
 
                         Some(exp)
                     }
-                    t => panic!("expected '=' or ';' in declaration of {}, got {:?}", name, t),
+                    t => panic!(
+                        "expected '=' or ';' in declaration of {}, got {:?}",
+                        name, t
+                    ),
                 };
 
                 AstStatement::VarDec {
@@ -149,7 +151,7 @@ impl Parser {
         self.advance();
 
         let AstExpr::Var(name) = lhs else {
-            panic!("wrong lhs for variable");
+            panic!("expected variable, got: {:?}", lhs);
         };
 
         AstExpr::Assignment {

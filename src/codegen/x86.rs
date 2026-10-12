@@ -1,12 +1,18 @@
-use std::fmt::Write;
+use std::{collections::HashMap, fmt::Write};
 
 use crate::ast::{AstExpr, AstFunc, AstProgram, AstStatement, Binop, Unop, Visitor};
+
+// Default int value
+const DEFAULT_VALUE: i32 = 67;
 
 #[derive(Default)]
 pub struct X86Backend {
     out: String,
 
     label_count: u32,
+
+    stack_index: i64,
+    var_map: HashMap<String, i64>,
 }
 
 impl X86Backend {
@@ -140,6 +146,12 @@ impl Visitor for X86Backend {
         for statement in &func.statements {
             statement.accept(self);
         }
+
+        if !matches!(func.statements.last(), Some(AstStatement::Return { .. })) {
+            self.instr("movq", &format!("${}, %rax", DEFAULT_VALUE));
+            self.epilogue();
+            self.instr("ret", "");
+        }
     }
 
     fn visit_statement(&mut self, statement: &AstStatement) {
@@ -149,7 +161,27 @@ impl Visitor for X86Backend {
                 self.epilogue();
                 self.instr("ret", "");
             }
-            _ => todo!("backend statements"),
+            AstStatement::VarDec {
+                var_type: _,
+                name,
+                exp,
+            } => {
+                if self.var_map.contains_key(name) {
+                    panic!("variable declared twice: {}", name);
+                }
+
+                if let Some(rhs) = exp {
+                    rhs.accept(self);
+                } else {
+                    self.instr("movq", &format!("${}, %rax", DEFAULT_VALUE));
+                }
+
+                self.instr("pushq", "%rax");
+                self.stack_index -= 8;
+                self.var_map.insert(name.to_string(), self.stack_index);
+            }
+            AstStatement::Expr { exp } => exp.accept(self),
+            // _ => unreachable!(),
         }
     }
 
@@ -185,8 +217,21 @@ impl Visitor for X86Backend {
             AstExpr::Int(v) => {
                 self.instr("movq", &format!("${}, %rax", v));
             }
-            AstExpr::Var(_) => todo!("x86 variable read"),
-            AstExpr::Assignment { lhs: _, rhs: _ } => todo!("x86 assignment handling"),
+            AstExpr::Var(name) => {
+                let Some(&offset) = self.var_map.get(name) else {
+                    panic!("Use of undeclared indentifier: {}", name);
+                };
+
+                self.instr("movq", &format!("{}(%rbp), %rax", offset));
+            }
+            AstExpr::Assignment { lhs, rhs } => {
+                let Some(&offset) = self.var_map.get(lhs) else {
+                    panic!("Use of undeclared identifier: {}", lhs);
+                };
+
+                rhs.accept(self);
+                self.instr("movq", &format!("%rax, {}(%rbp)", offset));
+            }
         }
     }
 }
