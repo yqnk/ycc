@@ -1,4 +1,6 @@
-use super::{Binop, Type, Unop};
+use crate::{Binop, Unop};
+
+use super::Type;
 
 pub struct AstProgram {
     pub main: AstFunc,
@@ -24,7 +26,6 @@ pub enum AstStatement {
     },
 }
 
-// Precedence is encoded by the tree shape, not by one node type per level
 #[derive(Debug)]
 pub enum AstExpr {
     Assignment {

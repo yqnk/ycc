@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fmt::Write};
 
-use crate::ast::{AstExpr, AstFunc, AstProgram, AstStatement, Binop, Unop, Visitor};
+use crate::ast::{AstExpr, AstFunc, AstProgram, AstStatement, Visitor};
+use crate::{Binop, Unop};
 
 // Default int value
 const DEFAULT_VALUE: i32 = 67;

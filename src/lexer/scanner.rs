@@ -1,10 +1,10 @@
 use std::collections::VecDeque;
 use std::fs;
 
-use crate::ast::Binop;
+use crate::ops::{Binop, Unop};
 
 use super::keyword::Keyword;
-use super::token::{TokenType, is_operator};
+use super::token::TokenType;
 
 #[derive(Debug)]
 pub struct Lexer {
@@ -54,9 +54,9 @@ impl Lexer {
 
     fn maybe_assign(&mut self, op: Binop) -> TokenType {
         if self.consume_if('=') {
-            TokenType::CompoundAssignment(op)
+            TokenType::Assign(Some(op))
         } else {
-            op.token()
+            TokenType::Binop(op)
         }
     }
 
@@ -71,77 +71,47 @@ impl Lexer {
     }
 
     fn next_token_operator(&mut self) -> TokenType {
-        match self.lexer_getc() {
-            Some('{') => TokenType::LBracket,
-            Some('}') => TokenType::RBracket,
-            Some('(') => TokenType::LParen,
-            Some(')') => TokenType::RParen,
-            Some(';') => TokenType::Semi,
+        let c = self
+            .lexer_getc()
+            .expect("next_token_operator called at end of input");
 
-            // Unop
-            Some('~') => TokenType::BitwiseComplement,
-            Some('!') => {
-                if self.consume_if('=') {
-                    TokenType::NotEqualTo
-                } else {
-                    TokenType::LogicalNegation
-                }
-            }
+        match c {
+            '{' => TokenType::LBracket,
+            '}' => TokenType::RBracket,
+            '(' => TokenType::LParen,
+            ')' => TokenType::RParen,
+            ';' => TokenType::Semi,
 
-            // Binop
-            Some('+') => self.maybe_assign(Binop::Add),
-            Some('-') => self.maybe_assign(Binop::Sub),
-            Some('*') => self.maybe_assign(Binop::Mul),
-            Some('/') => self.maybe_assign(Binop::Div),
-            Some('%') => self.maybe_assign(Binop::Mod),
+            '~' => TokenType::Unop(Unop::BitwiseComplement),
 
-            Some('<') => {
-                if self.consume_if('=') {
-                    TokenType::LessThanOrEqualTo
-                } else if self.consume_if('<') {
-                    self.maybe_assign(Binop::LShift)
-                } else {
-                    TokenType::LessThan
-                }
-            }
-            Some('>') => {
-                if self.consume_if('=') {
-                    TokenType::GreaterThanOrEqualTo
-                } else if self.consume_if('>') {
-                    self.maybe_assign(Binop::RShift)
-                } else {
-                    TokenType::GreaterThan
-                }
-            }
+            '+' => self.maybe_assign(Binop::Add),
+            '-' => self.maybe_assign(Binop::Sub),
+            '*' => self.maybe_assign(Binop::Mul),
+            '/' => self.maybe_assign(Binop::Div),
+            '%' => self.maybe_assign(Binop::Mod),
+            '^' => self.maybe_assign(Binop::BitwiseXor),
 
-            Some('&') => {
-                if self.consume_if('&') {
-                    TokenType::LogicalAnd
-                } else {
-                    self.maybe_assign(Binop::BitwiseAnd)
-                }
-            }
+            '!' if self.consume_if('=') => TokenType::Binop(Binop::NotEqualTo),
+            '!' => TokenType::Unop(Unop::LogicalNegation),
 
-            Some('|') => {
-                if self.consume_if('|') {
-                    TokenType::LogicalOr
-                } else {
-                    self.maybe_assign(Binop::BitwiseOr)
-                }
-            }
+            '=' if self.consume_if('=') => TokenType::Binop(Binop::EqualTo),
+            '=' => TokenType::Assign(None),
 
-            Some('^') => self.maybe_assign(Binop::BitwiseXor),
+            '<' if self.consume_if('=') => TokenType::Binop(Binop::LessThanOrEqualTo),
+            '<' if self.consume_if('<') => self.maybe_assign(Binop::LShift),
+            '<' => TokenType::Binop(Binop::LessThan),
 
-            Some('=') => {
-                if self.consume_if('=') {
-                    return TokenType::EqualTo;
-                } else {
-                    return TokenType::Assignment;
-                }
-            }
+            '>' if self.consume_if('=') => TokenType::Binop(Binop::GreaterThanOrEqualTo),
+            '>' if self.consume_if('>') => self.maybe_assign(Binop::RShift),
+            '>' => TokenType::Binop(Binop::GreaterThan),
 
-            Some(c) => panic!("unexpected operator '{}' at offset {}", c, self.pos - 1),
-            None => unreachable!("next_token_operator called at end of input"),
+            '&' if self.consume_if('&') => TokenType::Binop(Binop::LogicalAnd),
+            '&' => self.maybe_assign(Binop::BitwiseAnd),
+
+            '|' if self.consume_if('|') => TokenType::Binop(Binop::LogicalOr),
+            '|' => self.maybe_assign(Binop::BitwiseOr),
+
+            c => panic!("unexpected character '{}' at offset {}", c, self.pos - 1),
         }
     }
 
@@ -164,20 +134,17 @@ impl Lexer {
     }
 
     pub fn next_token_peek(&mut self) -> TokenType {
-        if self.token_queue.len() > 0 {
-            if let Some(f) = self.token_queue.front() {
-                return f.clone();
-            }
+        if let Some(front) = self.token_queue.front() {
+            return front.clone();
         }
 
         self.skip_whitespace();
 
         let token_type = match self.peek() {
             None => TokenType::Eof,
-            Some(c) if is_operator(c) => self.next_token_operator(),
             Some(c) if c.is_ascii_digit() => self.next_token_int(),
             Some(c) if c.is_ascii_alphabetic() || c == '_' => self.next_token_word(),
-            Some(c) => panic!("unexpected character '{}' at offset {}", c, self.pos),
+            Some(_) => self.next_token_operator(),
         };
 
         self.token_queue.push_back(token_type.clone());

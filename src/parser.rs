@@ -1,5 +1,8 @@
-use crate::ast::*;
-use crate::lexer::{Keyword, Lexer, TokenType};
+use crate::{
+    Binop,
+    ast::*,
+    lexer::{Keyword, Lexer, TokenType},
+};
 
 #[derive(Debug)]
 pub struct Parser {
@@ -9,12 +12,10 @@ pub struct Parser {
 
 impl Parser {
     pub fn init(file_path: &str) -> Self {
-        let parser = Self {
+        Self {
             cur_token: TokenType::None,
             lexer: Lexer::init(file_path),
-        };
-
-        parser
+        }
     }
 
     pub fn is_eof(&self) -> bool {
@@ -42,11 +43,9 @@ impl Parser {
     }
 
     pub fn parse_program(&mut self) -> AstProgram {
-        let program = AstProgram {
+        AstProgram {
             main: self.parse_func(),
-        };
-
-        program
+        }
     }
 
     fn parse_type(&mut self) -> Type {
@@ -106,15 +105,14 @@ impl Parser {
 
                 AstStatement::Return { exp }
             }
-            TokenType::Keyword(_kw @ Keyword::Int) => {
-                // todo, better to add an if is type
-                // identifier or something like this idk
+            t if t.is_type_specifier() => {
                 let var_type = self.parse_type();
                 let name = self.parse_identifier();
 
                 let exp = match self.advance() {
                     TokenType::Semi => None,
-                    TokenType::Assignment => {
+                    // only plain `=` initializes; `int a += 1;` is not C
+                    TokenType::Assign(None) => {
                         let exp = self.parse_expr();
                         self.advance_match(|pred| pred.is_semi());
 
@@ -142,45 +140,36 @@ impl Parser {
     }
 
     fn parse_expr(&mut self) -> AstExpr {
-        // 1 is the lowest precedence binary operator, defined in type.rs
-        let lhs = self.parse_binary(1);
+        let lhs = self.parse_binary(Binop::LOWEST_PRECEDENCE);
 
         // peek: a non-assignment token belongs to the caller (e.g. the ';')
-        match self.lexer.next_token_peek() {
-            TokenType::Assignment => {
-                self.advance();
+        let TokenType::Assign(op) = self.lexer.next_token_peek() else {
+            return lhs;
+        };
+        self.advance();
 
-                let AstExpr::Var(name) = lhs else {
-                    panic!("expected variable, got: {:?}", lhs);
-                };
+        let AstExpr::Var(name) = lhs else {
+            panic!(
+                "expected variable on the left of an assignment, got: {:?}",
+                lhs
+            );
+        };
 
-                AstExpr::Assignment {
-                    op: None,
-                    lhs: name,
-                    rhs: Box::new(self.parse_expr()),
-                }
-            }
-            TokenType::CompoundAssignment(op) => {
-                self.advance();
-
-                let AstExpr::Var(name) = lhs else {
-                    panic!("expected variable, got: {:?}", lhs);
-                };
-
-                AstExpr::Assignment {
-                    op: Some(op),
-                    lhs: name,
-                    rhs: Box::new(self.parse_expr()),
-                }
-            }
-            _ => lhs,
+        // right-recursion: assignment is right-associative
+        AstExpr::Assignment {
+            op,
+            lhs: name,
+            rhs: Box::new(self.parse_expr()),
         }
     }
 
+    /// Precedence climbing: parse operators binding at least as tight as
+    /// `min_power`, leaving looser ones to the caller.
     fn parse_binary(&mut self, min_power: u8) -> AstExpr {
         let mut lhs = self.parse_factor();
 
-        while let Some((op, power)) = Binop::from_token(&self.lexer.next_token_peek()) {
+        while let Some(op) = self.lexer.next_token_peek().as_binop() {
+            let power = op.precedence();
             if power < min_power {
                 break;
             }
@@ -201,7 +190,7 @@ impl Parser {
     fn parse_factor(&mut self) -> AstExpr {
         let token = self.advance();
 
-        if let Some(op) = Unop::from_token(&token) {
+        if let Some(op) = token.as_unop() {
             return AstExpr::Unary {
                 op,
                 operand: Box::new(self.parse_factor()),

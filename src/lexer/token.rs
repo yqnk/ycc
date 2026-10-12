@@ -1,4 +1,5 @@
-use crate::ast::Binop;
+use crate::ops::{Binop, Unop};
+
 use super::keyword::Keyword;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -8,35 +9,9 @@ pub enum TokenType {
     LParen,
     RParen,
 
-    // Unop
-    Sub,
-    LogicalNegation,
-    BitwiseComplement,
-
-    // Binop
-    Add, // Also an Unop btw...
-    Mul,
-    Div,
-    Mod,
-    LogicalAnd,
-    LogicalOr,
-    EqualTo,
-    NotEqualTo,
-    LessThan,
-    LessThanOrEqualTo,
-    GreaterThan,
-    GreaterThanOrEqualTo,
-
-    BitwiseAnd,
-    BitwiseOr,
-    BitwiseXor,
-
-    LShift,
-    RShift,
-
-    // Assign
-    Assignment,
-    CompoundAssignment(Binop),
+    Binop(Binop),
+    Unop(Unop),
+    Assign(Option<Binop>),
 
     Identifier(String),
     Keyword(Keyword),
@@ -45,29 +20,6 @@ pub enum TokenType {
     Semi,
     Eof,
     None,
-}
-
-pub fn is_operator(c: char) -> bool {
-    matches!(
-        c,
-        '{' | '}'
-            | '('
-            | ')'
-            | ';'
-            | '-'
-            | '~'
-            | '!'
-            | '+'
-            | '*'
-            | '/'
-            | '%'
-            | '&'
-            | '|'
-            | '^'
-            | '='
-            | '<'
-            | '>'
-    )
 }
 
 impl TokenType {
@@ -89,5 +41,20 @@ impl TokenType {
 
     pub fn is_semi(&self) -> bool {
         *self == TokenType::Semi
+    }
+
+    pub fn as_binop(&self) -> Option<Binop> {
+        match self {
+            TokenType::Binop(op) => Some(*op),
+            _ => None,
+        }
+    }
+
+    pub fn as_unop(&self) -> Option<Unop> {
+        match self {
+            TokenType::Unop(op) => Some(*op),
+            TokenType::Binop(op) => op.as_unop(),
+            _ => None,
+        }
     }
 }
