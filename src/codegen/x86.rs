@@ -160,7 +160,6 @@ impl Visitor for X86Backend {
                 lhs,
                 rhs,
             } => self.short_circuit(*op == Binop::LogicalOr, lhs, rhs),
-
             AstExpr::Binary { op, lhs, rhs } => {
                 lhs.accept(self);
                 self.instr("pushq", "%rax"); // push lhs
@@ -169,7 +168,6 @@ impl Visitor for X86Backend {
                 self.instr("popq", "%rax"); // get lhs back in rax
                 self.emit_binop(op);
             }
-
             AstExpr::Unary { op, operand } => {
                 operand.accept(self);
 
@@ -184,10 +182,10 @@ impl Visitor for X86Backend {
                     Unop::BitwiseComplement => self.instr("notq", "%rax"),
                 }
             }
-
             AstExpr::Int(v) => {
                 self.instr("movq", &format!("${}, %rax", v));
             }
+            AstExpr::Assignment { lhs: _, rhs: _ } => todo!("x86 assignment handling"),
         }
     }
 }

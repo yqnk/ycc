@@ -1,1 +1,1 @@
-int main() { return 2 * 7; }
+int main() { return -~~!!2 * 7 ^ !!~0; }

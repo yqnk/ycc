@@ -69,8 +69,7 @@ impl Visitor for AstPrettyPrinter {
                 name,
                 exp,
             } => {
-                iprintln!(self, "ASSIGN (");
-
+                iprintln!(self, "VARDEC (");
                 self.nested(|pp| {
                     iprintln!(pp, format!("{:?} {}", var_type, name));
                     match exp {
@@ -104,6 +103,10 @@ impl Visitor for AstPrettyPrinter {
             }
             AstExpr::Int(value) => {
                 iprintln!(self, format!("INT {}", value));
+            }
+            AstExpr::Assignment { lhs, rhs } => {
+                iprintln!(self, format!("ASSIGN {} =", lhs));
+                self.nested(|pp| rhs.accept(pp));
             }
         }
     }

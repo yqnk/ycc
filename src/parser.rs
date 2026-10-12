@@ -52,7 +52,14 @@ impl Parser {
 
     fn parse_type(&mut self) -> Type {
         match self.advance_match(|t| t.is_type_specifier()) {
-            TokenType::Keyword(kw) => Type::from_keyword(&kw).unwrap(),
+            TokenType::Keyword(kw) => Type::from_keyword(&kw),
+            _ => unreachable!(),
+        }
+    }
+
+    fn parse_identifier(&mut self) -> String {
+        match self.advance_match(|t| t.is_ident()) {
+            TokenType::Identifier(str) => str,
             _ => unreachable!(),
         }
     }
@@ -92,12 +99,29 @@ impl Parser {
                 self.advance();
 
                 let exp = self.parse_expr();
-                let _semi = self.advance_match(|t| t.is_semi());
+                self.advance_match(|pred| pred.is_semi());
 
                 AstStatement::Return { exp }
             }
-            TokenType::Keyword(Keyword::Int) => {
-                todo!("Add int assignment parsing!")
+            TokenType::Keyword(_kw @ Keyword::Int) => {
+                // todo, better to add an if is type
+                // identifier or something like this idk
+                let var_type = self.parse_type();
+                let name = self.parse_identifier();
+
+                let exp = match self.advance() {
+                    TokenType::Semi => None,
+                    TokenType::Assignment => Some(self.parse_expr()),
+                    _ => unreachable!(),
+                };
+
+                self.advance_match(|pred| pred.is_semi());
+
+                AstStatement::VarDec {
+                    var_type,
+                    name,
+                    exp,
+                }
             }
             _ => {
                 let exp = self.parse_expr();
@@ -108,7 +132,22 @@ impl Parser {
 
     fn parse_expr(&mut self) -> AstExpr {
         // 1 is the highest precedence binary operator, defined in type.rs
-        self.parse_binary(1)
+        if self.lexer.next_token_peek().is_ident() {
+            self.parse_assign()
+        } else {
+            self.parse_binary(1)
+        }
+    }
+
+    fn parse_assign(&mut self) -> AstExpr {
+        let ident = self.parse_identifier();
+        self.advance_match(|t| *t == TokenType::Assignment);
+        let exp = self.parse_expr();
+        self.advance_match(|t| t.is_semi());
+        AstExpr::Assignment {
+            lhs: ident,
+            rhs: Box::new(exp),
+        }
     }
 
     fn parse_binary(&mut self, min_power: u8) -> AstExpr {
@@ -149,7 +188,9 @@ impl Parser {
                 exp
             }
             TokenType::Constant(value) => AstExpr::Int(value),
-            _ => unimplemented!("unknown factor token"),
+            t => {
+                unimplemented!("unknown factor token: {:?}", t)
+            }
         }
     }
 }

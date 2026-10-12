@@ -26,6 +26,10 @@ pub enum AstStatement {
 
 // Precedence is encoded by the tree shape, not by one node type per level
 pub enum AstExpr {
+    Assignment {
+        lhs: String,
+        rhs: Box<AstExpr>,
+    },
     Binary {
         op: Binop,
         lhs: Box<AstExpr>,

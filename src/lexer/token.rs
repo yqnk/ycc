@@ -74,7 +74,7 @@ impl TokenType {
     }
 
     pub fn is_type_specifier(&self) -> bool {
-        matches!(self, TokenType::Keyword(Keyword::Int))
+        matches!(self, TokenType::Keyword(kw @ Keyword::Int))
     }
 
     pub fn is_constant(&self) -> bool {

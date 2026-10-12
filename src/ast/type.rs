@@ -25,7 +25,7 @@ pub enum Binop {
     BitwiseOr,
     BitwiseXor,
     BitwiseAnd,
-    Assignment,
+    Assignment, // right-associative
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
@@ -37,10 +37,10 @@ pub enum Unop {
 }
 
 impl Type {
-    pub fn from_keyword(kw: &Keyword) -> Option<Self> {
+    pub fn from_keyword(kw: &Keyword) -> Self {
         match kw {
-            Keyword::Int => Some(Type::Int),
-            _ => None,
+            Keyword::Int => Type::Int,
+            _ => unreachable!("unknown type was given"),
         }
     }
 }
