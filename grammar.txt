@@ -3,7 +3,7 @@
 <statement> ::= "return" <exp> ";"
               | <exp> ";"
               | "int" <id> [ = <exp>] ";" 
-<exp> ::= <id> "=" <exp>
+<exp> ::= <id> "=" <exp>  (right-associative)
         | <exp> <binop> <exp>
         | <unary_op> <exp>
         | "(" <exp> ")"

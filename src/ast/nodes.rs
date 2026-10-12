@@ -39,5 +39,6 @@ pub enum AstExpr {
         op: Unop,
         operand: Box<AstExpr>,
     },
+    Var(String),
     Int(i32),
 }

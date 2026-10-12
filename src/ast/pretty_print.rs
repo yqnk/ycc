@@ -1,5 +1,3 @@
-use crate::ast::Type;
-
 use super::nodes::{AstExpr, AstFunc, AstProgram, AstStatement};
 use super::visitor::Visitor;
 
@@ -62,7 +60,9 @@ impl Visitor for AstPrettyPrinter {
                 iprintln!(self, ")");
             }
             AstStatement::Expr { exp } => {
+                iprintln!(self, "EXPR (");
                 self.nested(|pp| exp.accept(pp));
+                iprintln!(self, ")");
             }
             AstStatement::VarDec {
                 var_type,
@@ -72,13 +72,10 @@ impl Visitor for AstPrettyPrinter {
                 iprintln!(self, "VARDEC (");
                 self.nested(|pp| {
                     iprintln!(pp, format!("{:?} {}", var_type, name));
-                    match exp {
-                        Some(e) => {
-                            iprintln!(pp, "=");
-                            e.accept(pp)
-                        }
-                        None => iprintln!(pp, ";"),
-                    };
+                    if let Some(e) = exp {
+                        iprintln!(pp, "=");
+                        e.accept(pp);
+                    }
                 });
 
                 iprintln!(self, ")");
@@ -103,6 +100,9 @@ impl Visitor for AstPrettyPrinter {
             }
             AstExpr::Int(value) => {
                 iprintln!(self, format!("INT {}", value));
+            }
+            AstExpr::Var(name) => {
+                iprintln!(self, format!("VAR {}", name));
             }
             AstExpr::Assignment { lhs, rhs } => {
                 iprintln!(self, format!("ASSIGN {} =", lhs));

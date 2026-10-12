@@ -185,6 +185,7 @@ impl Visitor for X86Backend {
             AstExpr::Int(v) => {
                 self.instr("movq", &format!("${}, %rax", v));
             }
+            AstExpr::Var(_) => todo!("x86 variable read"),
             AstExpr::Assignment { lhs: _, rhs: _ } => todo!("x86 assignment handling"),
         }
     }

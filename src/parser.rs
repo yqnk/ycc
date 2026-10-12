@@ -73,8 +73,12 @@ impl Parser {
 
         let mut statements = Vec::new();
 
-        while self.lexer.next_token_peek() != TokenType::RBracket {
-            statements.push(self.parse_statement());
+        loop {
+            match self.lexer.next_token_peek() {
+                TokenType::RBracket => break,
+                TokenType::Eof => panic!("unterminated function body: missing '}}'"),
+                _ => statements.push(self.parse_statement()),
+            }
         }
 
         let _token_rbracket = self.advance_match(|t| *t == TokenType::RBracket);
@@ -111,11 +115,14 @@ impl Parser {
 
                 let exp = match self.advance() {
                     TokenType::Semi => None,
-                    TokenType::Assignment => Some(self.parse_expr()),
-                    _ => unreachable!(),
-                };
+                    TokenType::Assignment => {
+                        let exp = self.parse_expr();
+                        self.advance_match(|pred| pred.is_semi());
 
-                self.advance_match(|pred| pred.is_semi());
+                        Some(exp)
+                    }
+                    t => panic!("expected '=' or ';' in declaration of {}, got {:?}", name, t),
+                };
 
                 AstStatement::VarDec {
                     var_type,
@@ -125,28 +132,29 @@ impl Parser {
             }
             _ => {
                 let exp = self.parse_expr();
+                self.advance_match(|pred| pred.is_semi());
+
                 AstStatement::Expr { exp }
             }
         }
     }
 
     fn parse_expr(&mut self) -> AstExpr {
-        // 1 is the highest precedence binary operator, defined in type.rs
-        if self.lexer.next_token_peek().is_ident() {
-            self.parse_assign()
-        } else {
-            self.parse_binary(1)
-        }
-    }
+        // 1 is the lowest precedence binary operator, defined in type.rs
+        let lhs = self.parse_binary(1);
 
-    fn parse_assign(&mut self) -> AstExpr {
-        let ident = self.parse_identifier();
-        self.advance_match(|t| *t == TokenType::Assignment);
-        let exp = self.parse_expr();
-        self.advance_match(|t| t.is_semi());
+        if self.lexer.next_token_peek() != TokenType::Assignment {
+            return lhs;
+        }
+        self.advance();
+
+        let AstExpr::Var(name) = lhs else {
+            panic!("wrong lhs for variable");
+        };
+
         AstExpr::Assignment {
-            lhs: ident,
-            rhs: Box::new(exp),
+            lhs: name,
+            rhs: Box::new(self.parse_expr()),
         }
     }
 
@@ -188,6 +196,7 @@ impl Parser {
                 exp
             }
             TokenType::Constant(value) => AstExpr::Int(value),
+            TokenType::Identifier(name) => AstExpr::Var(name),
             t => {
                 unimplemented!("unknown factor token: {:?}", t)
             }
