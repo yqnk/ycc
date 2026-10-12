@@ -145,18 +145,35 @@ impl Parser {
         // 1 is the lowest precedence binary operator, defined in type.rs
         let lhs = self.parse_binary(1);
 
-        if self.lexer.next_token_peek() != TokenType::Assignment {
-            return lhs;
-        }
-        self.advance();
+        // peek: a non-assignment token belongs to the caller (e.g. the ';')
+        match self.lexer.next_token_peek() {
+            TokenType::Assignment => {
+                self.advance();
 
-        let AstExpr::Var(name) = lhs else {
-            panic!("expected variable, got: {:?}", lhs);
-        };
+                let AstExpr::Var(name) = lhs else {
+                    panic!("expected variable, got: {:?}", lhs);
+                };
 
-        AstExpr::Assignment {
-            lhs: name,
-            rhs: Box::new(self.parse_expr()),
+                AstExpr::Assignment {
+                    op: None,
+                    lhs: name,
+                    rhs: Box::new(self.parse_expr()),
+                }
+            }
+            TokenType::CompoundAssignment(op) => {
+                self.advance();
+
+                let AstExpr::Var(name) = lhs else {
+                    panic!("expected variable, got: {:?}", lhs);
+                };
+
+                AstExpr::Assignment {
+                    op: Some(op),
+                    lhs: name,
+                    rhs: Box::new(self.parse_expr()),
+                }
+            }
+            _ => lhs,
         }
     }
 

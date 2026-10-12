@@ -104,8 +104,12 @@ impl Visitor for AstPrettyPrinter {
             AstExpr::Var(name) => {
                 iprintln!(self, format!("VAR {}", name));
             }
-            AstExpr::Assignment { lhs, rhs } => {
-                iprintln!(self, format!("ASSIGN {} =", lhs));
+            AstExpr::Assignment { op, lhs, rhs } => {
+                if op.is_some() {
+                    iprintln!(self, format!("COMPOUND-ASSIGN {} {:?}", lhs, op.unwrap()));
+                } else {
+                    iprintln!(self, format!("ASSIGN {} =", lhs));
+                }
                 self.nested(|pp| rhs.accept(pp));
             }
         }

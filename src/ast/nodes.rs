@@ -28,6 +28,7 @@ pub enum AstStatement {
 #[derive(Debug)]
 pub enum AstExpr {
     Assignment {
+        op: Option<Binop>,
         lhs: String,
         rhs: Box<AstExpr>,
     },

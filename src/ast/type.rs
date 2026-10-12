@@ -71,6 +71,22 @@ impl Binop {
         })
     }
 
+    pub fn token(&self) -> TokenType {
+        match &self {
+            Binop::Add => TokenType::Add,
+            Binop::Sub => TokenType::Sub,
+            Binop::Mul => TokenType::Mul,
+            Binop::Div => TokenType::Div,
+            Binop::Mod => TokenType::Mod,
+            Binop::LShift => TokenType::LShift,
+            Binop::RShift => TokenType::RShift,
+            Binop::BitwiseOr => TokenType::BitwiseOr,
+            Binop::BitwiseXor => TokenType::BitwiseXor,
+            Binop::BitwiseAnd => TokenType::BitwiseAnd,
+            op => unreachable!("no single token for {:?}", op),
+        }
+    }
+
     pub fn symbol(&self) -> &'static str {
         match self {
             Binop::Add => "+",

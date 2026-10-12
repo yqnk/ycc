@@ -224,12 +224,20 @@ impl Visitor for X86Backend {
 
                 self.instr("movq", &format!("{}(%rbp), %rax", offset));
             }
-            AstExpr::Assignment { lhs, rhs } => {
+            AstExpr::Assignment { op, lhs, rhs } => {
                 let Some(&offset) = self.var_map.get(lhs) else {
                     panic!("Use of undeclared identifier: {}", lhs);
                 };
 
                 rhs.accept(self);
+
+                if let Some(op) = op {
+                    // rhs is in %rax but emit_binop wants lhs in %rax and rhs in %rcx
+                    self.instr("movq", "%rax, %rcx");
+                    self.instr("movq", &format!("{}(%rbp), %rax", offset));
+                    self.emit_binop(op);
+                }
+
                 self.instr("movq", &format!("%rax, {}(%rbp)", offset));
             }
         }

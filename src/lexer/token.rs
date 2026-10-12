@@ -1,3 +1,4 @@
+use crate::ast::Binop;
 use super::keyword::Keyword;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,6 +36,7 @@ pub enum TokenType {
 
     // Assign
     Assignment,
+    CompoundAssignment(Binop),
 
     Identifier(String),
     Keyword(Keyword),

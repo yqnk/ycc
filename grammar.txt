@@ -3,29 +3,32 @@
 <statement> ::= "return" <exp> ";"
               | <exp> ";"
               | "int" <id> [ = <exp>] ";" 
-<exp> ::= <id> "=" <exp>  (right-associative)
+<exp> ::= <id> <assign_op> <exp>  (right-associative)
         | <exp> <binop> <exp>
         | <unary_op> <exp>
         | "(" <exp> ")"
         | <int>
         | <id>
 <unary_op> ::= "!" | "~" | "-" | "+"
+<assign_op> ::= "=" | "+=" | "-=" | "*=" | "/=" | "%="
+              | "<<=" | ">>=" | "&=" | "|=" | "^="
 <binop> ::= "||" | "&&" | "|" | "^" | "&"
           | "==" | "!=" | "<" | "<=" | ">" | ">="
           | "<<" | ">>" | "+" | "-" | "*" | "/" | "%"
 
 ----
-precedence for binops:
-  1  ||
-  2  &&
-  3  |
-  4  ^
-  5  &
-  6  ==  !=
-  7  <  <=  >  >=
-  8  <<  >>
-  9  +  -
-  10 *  /  %
+precedence for operators:
+  1  =  +=  -=  *=  /=  %=  <<=  >>=  &=  |=  ^=
+  2  ||
+  3  &&
+  4  |
+  5  ^
+  6  &
+  7  ==  !=
+  8  <  <=  >  >=
+  9  <<  >>
+  10 +  -
+  11 *  /  %
 
 All binary operators are left-associative.
-All kinds of assignments are right-associative.
+Any kind of assignment is right-associative.

@@ -1,6 +1,8 @@
 use std::collections::VecDeque;
 use std::fs;
 
+use crate::ast::Binop;
+
 use super::keyword::Keyword;
 use super::token::{TokenType, is_operator};
 
@@ -50,6 +52,14 @@ impl Lexer {
         }
     }
 
+    fn maybe_assign(&mut self, op: Binop) -> TokenType {
+        if self.consume_if('=') {
+            TokenType::CompoundAssignment(op)
+        } else {
+            op.token()
+        }
+    }
+
     fn lex_while(&mut self, pred: impl Fn(char) -> bool) -> String {
         let start = self.pos;
 
@@ -69,7 +79,6 @@ impl Lexer {
             Some(';') => TokenType::Semi,
 
             // Unop
-            Some('-') => TokenType::Sub,
             Some('~') => TokenType::BitwiseComplement,
             Some('!') => {
                 if self.consume_if('=') {
@@ -80,16 +89,17 @@ impl Lexer {
             }
 
             // Binop
-            Some('+') => TokenType::Add,
-            Some('*') => TokenType::Mul,
-            Some('/') => TokenType::Div,
-            Some('%') => TokenType::Mod,
+            Some('+') => self.maybe_assign(Binop::Add),
+            Some('-') => self.maybe_assign(Binop::Sub),
+            Some('*') => self.maybe_assign(Binop::Mul),
+            Some('/') => self.maybe_assign(Binop::Div),
+            Some('%') => self.maybe_assign(Binop::Mod),
 
             Some('<') => {
                 if self.consume_if('=') {
                     TokenType::LessThanOrEqualTo
                 } else if self.consume_if('<') {
-                    TokenType::LShift
+                    self.maybe_assign(Binop::LShift)
                 } else {
                     TokenType::LessThan
                 }
@@ -98,7 +108,7 @@ impl Lexer {
                 if self.consume_if('=') {
                     TokenType::GreaterThanOrEqualTo
                 } else if self.consume_if('>') {
-                    TokenType::RShift
+                    self.maybe_assign(Binop::RShift)
                 } else {
                     TokenType::GreaterThan
                 }
@@ -106,21 +116,21 @@ impl Lexer {
 
             Some('&') => {
                 if self.consume_if('&') {
-                    return TokenType::LogicalAnd;
+                    TokenType::LogicalAnd
                 } else {
-                    return TokenType::BitwiseAnd;
+                    self.maybe_assign(Binop::BitwiseAnd)
                 }
             }
 
             Some('|') => {
                 if self.consume_if('|') {
-                    return TokenType::LogicalOr;
+                    TokenType::LogicalOr
                 } else {
-                    return TokenType::BitwiseOr;
+                    self.maybe_assign(Binop::BitwiseOr)
                 }
             }
 
-            Some('^') => TokenType::BitwiseXor,
+            Some('^') => self.maybe_assign(Binop::BitwiseXor),
 
             Some('=') => {
                 if self.consume_if('=') {
