@@ -9,7 +9,7 @@ main:
 	movq	-8(%rbp), %rax
 	addq	%rcx, %rax
 	movq	%rax, -8(%rbp)
-	movq	-8(%rbp), %rax
+	movq	$0, %rax
 	movq	%rbp, %rsp
 	popq	%rbp
 	ret

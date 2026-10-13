@@ -67,7 +67,25 @@ impl Visitor for AstPrettyPrinter {
                 self.nested(|pp| exp.accept(pp));
                 iprintln!(self, ")");
             }
-            _ => unimplemented!(),
+            AstStatement::Cond {
+                exp,
+                if_body,
+                else_body,
+            } => {
+                iprintln!(self, "COND (");
+                self.nested(|pp| {
+                    iprintln!(pp, "cond:");
+                    exp.accept(pp)
+                });
+                self.nested(|pp| {
+                    iprintln!(pp, "body:");
+                    if_body.accept(pp);
+                });
+                if let Some(body) = else_body {
+                    self.nested(|pp| body.accept(pp));
+                }
+                iprintln!(self, ")");
+            }
         }
     }
 

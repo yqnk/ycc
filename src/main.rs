@@ -7,7 +7,7 @@ use ycc::{AstPrettyPrinter, Parser, X86Backend};
 fn main() {
     let path = env::args()
         .nth(1)
-        .unwrap_or_else(|| "examples/4.c".to_string());
+        .unwrap_or_else(|| "examples/6.c".to_string());
     let mut parser: Parser = Parser::init(&path);
 
     let program = parser.parse_program();

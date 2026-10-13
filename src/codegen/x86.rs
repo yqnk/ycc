@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Write};
 
-use crate::ast::{AstBlockItem, AstExpr, AstFunc, AstProgram, AstStatement, Visitor};
+use crate::ast::{AstBlockItem, AstExpr, AstFunc, AstProgram, AstStatement, Type, Visitor};
 use crate::{Binop, Unop};
 
 // Default int value
@@ -149,12 +149,19 @@ impl Visitor for X86Backend {
             block.accept(self);
         }
 
-        // FIXME: adapt this to blockitems
-        // if !matches!(func.blocks.last(), Some(AstStatement::Return { .. })) {
-        //     self.instr("movq", &format!("${}, %rax", DEFAULT_VALUE));
-        //     self.epilogue();
-        //     self.instr("ret", "");
-        // }
+        if let Some(AstBlockItem::Statement { statement }) = func.blocks.last()
+            && &func.name == "main"
+            && func.ret_type == Type::Int
+        {
+            match statement {
+                AstStatement::Return { exp: _ } => (),
+                _ => {
+                    self.instr("movq", &format!("${}, %rax", DEFAULT_VALUE));
+                    self.epilogue();
+                    self.instr("ret", "");
+                }
+            }
+        }
     }
 
     fn visit_statement(&mut self, statement: &AstStatement) {

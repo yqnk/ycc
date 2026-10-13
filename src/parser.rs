@@ -6,40 +6,45 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Parser {
-    pub cur_token: TokenType,
     pub lexer: Lexer,
 }
 
 impl Parser {
     pub fn init(file_path: &str) -> Self {
         Self {
-            cur_token: TokenType::None,
             lexer: Lexer::init(file_path),
         }
     }
 
-    pub fn is_eof(&self) -> bool {
-        self.cur_token == TokenType::Eof
+    pub fn peek(&mut self) -> TokenType {
+        self.lexer.next_token_peek()
     }
 
-    pub fn advance(&mut self) -> TokenType {
-        self.cur_token = self.lexer.next_token_pop();
-
-        self.cur_token.clone()
-    }
-
-    pub fn advance_match(&mut self, pred: impl Fn(&TokenType) -> bool) -> TokenType {
-        self.advance();
-        if !pred(&self.cur_token) {
-            panic!(
-                "{}:{}: could not match cur_token: {:?}",
-                file!(),
-                line!(),
-                self.cur_token
-            )
+    pub fn eat(&mut self, expected: &TokenType) -> TokenType {
+        let token = self.lexer.next_token_pop();
+        if &token != expected {
+            panic!("syntax error: expected {expected:?} but got {token:?} while parsing");
         }
 
-        self.cur_token.clone()
+        token
+    }
+
+    pub fn eat_matching(&mut self, what: &str, pred: impl Fn(&TokenType) -> bool) -> TokenType {
+        let token = self.lexer.next_token_pop();
+        if !pred(&token) {
+            panic!("syntax error: expected {what} but got {token:?} while parsing");
+        }
+
+        token
+    }
+
+    pub fn eat_if(&mut self, expected: &TokenType) -> bool {
+        if &self.peek() == expected {
+            self.lexer.next_token_pop();
+            return true;
+        }
+
+        false
     }
 
     pub fn parse_program(&mut self) -> AstProgram {
@@ -49,14 +54,14 @@ impl Parser {
     }
 
     fn parse_type(&mut self) -> Type {
-        match self.advance_match(|t| t.is_type_specifier()) {
+        match self.eat_matching("a type specifier", |t| t.is_type_specifier()) {
             TokenType::Keyword(kw) => Type::from_keyword(&kw),
             _ => unreachable!(),
         }
     }
 
     fn parse_identifier(&mut self) -> String {
-        match self.advance_match(|t| t.is_ident()) {
+        match self.eat_matching("an identifier", |t| t.is_ident()) {
             TokenType::Identifier(str) => str,
             _ => unreachable!(),
         }
@@ -64,36 +69,33 @@ impl Parser {
 
     fn parse_func(&mut self) -> AstFunc {
         let ret_type = self.parse_type();
-        let token_name = self.advance_match(|t| t.is_ident());
-        let _token_lpar = self.advance_match(|t| *t == TokenType::LParen);
-        let _token_rpar = self.advance_match(|t| *t == TokenType::RParen);
-        let _token_lbracket = self.advance_match(|t| *t == TokenType::LBracket);
+        let name = self.parse_identifier();
+
+        self.eat(&TokenType::LParen);
+        self.eat(&TokenType::RParen);
+        self.eat(&TokenType::LBracket);
 
         let mut blocks = Vec::new();
 
         loop {
-            match self.lexer.next_token_peek() {
+            match self.peek() {
                 TokenType::RBracket => break,
                 TokenType::Eof => panic!("unterminated function body: missing '}}'"),
                 _ => blocks.push(self.parse_block_item()),
             }
         }
 
-        let _token_rbracket = self.advance_match(|t| *t == TokenType::RBracket);
+        self.eat(&TokenType::RBracket);
 
-        if let TokenType::Identifier(name) = token_name {
-            return AstFunc {
-                ret_type,
-                name,
-                blocks,
-            };
+        AstFunc {
+            ret_type,
+            name,
+            blocks,
         }
-
-        unreachable!()
     }
 
     fn parse_block_item(&mut self) -> AstBlockItem {
-        if self.lexer.next_token_peek().is_type_specifier() {
+        if self.peek().is_type_specifier() {
             return self.parse_vardec();
         }
 
@@ -106,19 +108,13 @@ impl Parser {
         let var_type = self.parse_type();
         let name = self.parse_identifier();
 
-        let exp = match self.advance() {
-            TokenType::Semi => None,
-            TokenType::Assign(None) => {
-                let exp = self.parse_expr();
-                self.advance_match(|pred| pred.is_semi());
-
-                Some(exp)
-            }
-            t => panic!(
-                "expected '=' or ';' in declaration of {}, got {:?}",
-                name, t
-            ),
+        let exp = if self.eat_if(&TokenType::Assign(None)) {
+            Some(self.parse_expr())
+        } else {
+            None
         };
+
+        self.eat(&TokenType::Semi);
 
         AstBlockItem::VarDec {
             var_type,
@@ -128,33 +124,66 @@ impl Parser {
     }
 
     fn parse_statement(&mut self) -> AstStatement {
-        let token = self.lexer.next_token_peek();
-
-        match token {
+        match self.peek() {
             TokenType::Keyword(Keyword::Return) => {
-                self.advance();
+                self.eat(&TokenType::Keyword(Keyword::Return));
 
                 let exp = self.parse_expr();
-                self.advance_match(|pred| pred.is_semi());
+                self.eat(&TokenType::Semi);
 
                 AstStatement::Return { exp }
             }
+            TokenType::Keyword(Keyword::If) => {
+                self.eat(&TokenType::Keyword(Keyword::If));
+
+                self.eat(&TokenType::LParen);
+                let exp = self.parse_expr();
+                self.eat(&TokenType::RParen);
+
+                let if_body = self.parse_braced_block_item();
+
+                let else_body = if self.eat_if(&TokenType::Keyword(Keyword::Else)) {
+                    Some(Box::new(match self.peek() {
+                        TokenType::Keyword(Keyword::If) => AstBlockItem::Statement {
+                            statement: self.parse_statement(),
+                        },
+                        _ => self.parse_braced_block_item(),
+                    }))
+                } else {
+                    None
+                };
+
+                AstStatement::Cond {
+                    exp,
+                    if_body: Box::new(if_body),
+                    else_body,
+                }
+            }
             _ => {
                 let exp = self.parse_expr();
-                self.advance_match(|pred| pred.is_semi());
+                self.eat(&TokenType::Semi);
 
                 AstStatement::Expr { exp }
             }
         }
     }
 
+    fn parse_braced_block_item(&mut self) -> AstBlockItem {
+        self.eat(&TokenType::LBracket);
+        let body = self.parse_block_item();
+        self.eat(&TokenType::RBracket);
+
+        body
+    }
+
     fn parse_expr(&mut self) -> AstExpr {
         let lhs = self.parse_binary(Binop::LOWEST_PRECEDENCE);
 
-        let TokenType::Assign(op) = self.lexer.next_token_peek() else {
+        let TokenType::Assign(op) = self.peek() else {
             return lhs;
         };
-        self.advance();
+
+        self.lexer.next_token_pop();
 
         let AstExpr::Var(name) = lhs else {
             panic!(
@@ -173,12 +202,12 @@ impl Parser {
     fn parse_binary(&mut self, min_power: u8) -> AstExpr {
         let mut lhs = self.parse_factor();
 
-        while let Some(op) = self.lexer.next_token_peek().as_binop() {
+        while let Some(op) = self.peek().as_binop() {
             let power = op.precedence();
             if power < min_power {
                 break;
             }
-            self.advance();
+            self.lexer.next_token_pop();
 
             // power + 1: every C binary operator is left-associative
             let rhs = self.parse_binary(power + 1);
@@ -193,7 +222,7 @@ impl Parser {
     }
 
     fn parse_factor(&mut self) -> AstExpr {
-        let token = self.advance();
+        let token = self.lexer.next_token_pop();
 
         if let Some(op) = token.as_unop() {
             return AstExpr::Unary {
@@ -205,7 +234,7 @@ impl Parser {
         match token {
             TokenType::LParen => {
                 let exp = self.parse_expr();
-                let _rpar = self.advance_match(|t| *t == TokenType::RParen);
+                self.eat(&TokenType::RParen);
                 exp
             }
             TokenType::Constant(value) => AstExpr::Int(value),

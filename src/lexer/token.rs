@@ -42,10 +42,6 @@ impl TokenType {
         matches!(self, TokenType::Identifier(_))
     }
 
-    pub fn is_semi(&self) -> bool {
-        *self == TokenType::Semi
-    }
-
     pub fn as_binop(&self) -> Option<Binop> {
         match self {
             TokenType::Binop(op) => Some(*op),
