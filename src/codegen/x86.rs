@@ -1,10 +1,10 @@
 use std::{collections::HashMap, fmt::Write};
 
-use crate::ast::{AstExpr, AstFunc, AstProgram, AstStatement, Visitor};
+use crate::ast::{AstBlockItem, AstExpr, AstFunc, AstProgram, AstStatement, Visitor};
 use crate::{Binop, Unop};
 
 // Default int value
-const DEFAULT_VALUE: i32 = 67;
+const DEFAULT_VALUE: i32 = 0;
 
 #[derive(Default)]
 pub struct X86Backend {
@@ -131,6 +131,7 @@ impl Visitor for X86Backend {
     type Func = ();
     type Statement = ();
     type Expr = ();
+    type BlockItem = ();
 
     fn visit_program(&mut self, program: &AstProgram) -> String {
         self.out.clear();
@@ -144,15 +145,16 @@ impl Visitor for X86Backend {
         self.label(&func.name);
         self.prologue();
 
-        for statement in &func.statements {
-            statement.accept(self);
+        for block in &func.blocks {
+            block.accept(self);
         }
 
-        if !matches!(func.statements.last(), Some(AstStatement::Return { .. })) {
-            self.instr("movq", &format!("${}, %rax", DEFAULT_VALUE));
-            self.epilogue();
-            self.instr("ret", "");
-        }
+        // FIXME: adapt this to blockitems
+        // if !matches!(func.blocks.last(), Some(AstStatement::Return { .. })) {
+        //     self.instr("movq", &format!("${}, %rax", DEFAULT_VALUE));
+        //     self.epilogue();
+        //     self.instr("ret", "");
+        // }
     }
 
     fn visit_statement(&mut self, statement: &AstStatement) {
@@ -162,27 +164,8 @@ impl Visitor for X86Backend {
                 self.epilogue();
                 self.instr("ret", "");
             }
-            AstStatement::VarDec {
-                var_type: _,
-                name,
-                exp,
-            } => {
-                if self.var_map.contains_key(name) {
-                    panic!("variable declared twice: {}", name);
-                }
-
-                if let Some(rhs) = exp {
-                    rhs.accept(self);
-                } else {
-                    self.instr("movq", &format!("${}, %rax", DEFAULT_VALUE));
-                }
-
-                self.instr("pushq", "%rax");
-                self.stack_index -= 8;
-                self.var_map.insert(name.to_string(), self.stack_index);
-            }
             AstStatement::Expr { exp } => exp.accept(self),
-            // _ => unreachable!(),
+            _ => unimplemented!(),
         }
     }
 
@@ -240,6 +223,33 @@ impl Visitor for X86Backend {
                 }
 
                 self.instr("movq", &format!("%rax, {}(%rbp)", offset));
+            }
+        }
+    }
+
+    fn visit_blockitem(&mut self, expr: &crate::ast::AstBlockItem) -> Self::BlockItem {
+        match expr {
+            AstBlockItem::Statement { statement } => {
+                statement.accept(self);
+            }
+            AstBlockItem::VarDec {
+                var_type: _,
+                name,
+                exp,
+            } => {
+                if self.var_map.contains_key(name) {
+                    panic!("variable declared twice: {}", name);
+                }
+
+                if let Some(rhs) = exp {
+                    rhs.accept(self);
+                } else {
+                    self.instr("movq", &format!("${}, %rax", DEFAULT_VALUE));
+                }
+
+                self.instr("pushq", "%rax");
+                self.stack_index -= 8;
+                self.var_map.insert(name.to_string(), self.stack_index);
             }
         }
     }

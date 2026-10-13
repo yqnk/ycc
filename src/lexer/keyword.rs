@@ -2,6 +2,8 @@
 pub enum Keyword {
     Int,
     Return,
+    If,
+    Else,
 }
 
 impl Keyword {
@@ -9,6 +11,8 @@ impl Keyword {
         match s {
             "return" => Some(Keyword::Return),
             "int" => Some(Keyword::Int),
+            "if" => Some(Keyword::If),
+            "else" => Some(Keyword::Else),
             _ => None,
         }
     }

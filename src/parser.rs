@@ -69,13 +69,13 @@ impl Parser {
         let _token_rpar = self.advance_match(|t| *t == TokenType::RParen);
         let _token_lbracket = self.advance_match(|t| *t == TokenType::LBracket);
 
-        let mut statements = Vec::new();
+        let mut blocks = Vec::new();
 
         loop {
             match self.lexer.next_token_peek() {
                 TokenType::RBracket => break,
                 TokenType::Eof => panic!("unterminated function body: missing '}}'"),
-                _ => statements.push(self.parse_statement()),
+                _ => blocks.push(self.parse_block_item()),
             }
         }
 
@@ -85,14 +85,48 @@ impl Parser {
             return AstFunc {
                 ret_type,
                 name,
-                statements,
+                blocks,
             };
         }
 
         unreachable!()
     }
 
-    // this only works for Return(Int);
+    fn parse_block_item(&mut self) -> AstBlockItem {
+        if self.lexer.next_token_peek().is_type_specifier() {
+            return self.parse_vardec();
+        }
+
+        AstBlockItem::Statement {
+            statement: self.parse_statement(),
+        }
+    }
+
+    fn parse_vardec(&mut self) -> AstBlockItem {
+        let var_type = self.parse_type();
+        let name = self.parse_identifier();
+
+        let exp = match self.advance() {
+            TokenType::Semi => None,
+            TokenType::Assign(None) => {
+                let exp = self.parse_expr();
+                self.advance_match(|pred| pred.is_semi());
+
+                Some(exp)
+            }
+            t => panic!(
+                "expected '=' or ';' in declaration of {}, got {:?}",
+                name, t
+            ),
+        };
+
+        AstBlockItem::VarDec {
+            var_type,
+            name,
+            exp,
+        }
+    }
+
     fn parse_statement(&mut self) -> AstStatement {
         let token = self.lexer.next_token_peek();
 
@@ -104,31 +138,6 @@ impl Parser {
                 self.advance_match(|pred| pred.is_semi());
 
                 AstStatement::Return { exp }
-            }
-            t if t.is_type_specifier() => {
-                let var_type = self.parse_type();
-                let name = self.parse_identifier();
-
-                let exp = match self.advance() {
-                    TokenType::Semi => None,
-                    // only plain `=` initializes; `int a += 1;` is not C
-                    TokenType::Assign(None) => {
-                        let exp = self.parse_expr();
-                        self.advance_match(|pred| pred.is_semi());
-
-                        Some(exp)
-                    }
-                    t => panic!(
-                        "expected '=' or ';' in declaration of {}, got {:?}",
-                        name, t
-                    ),
-                };
-
-                AstStatement::VarDec {
-                    var_type,
-                    name,
-                    exp,
-                }
             }
             _ => {
                 let exp = self.parse_expr();
@@ -142,7 +151,6 @@ impl Parser {
     fn parse_expr(&mut self) -> AstExpr {
         let lhs = self.parse_binary(Binop::LOWEST_PRECEDENCE);
 
-        // peek: a non-assignment token belongs to the caller (e.g. the ';')
         let TokenType::Assign(op) = self.lexer.next_token_peek() else {
             return lhs;
         };
@@ -155,7 +163,6 @@ impl Parser {
             );
         };
 
-        // right-recursion: assignment is right-associative
         AstExpr::Assignment {
             op,
             lhs: name,
@@ -163,8 +170,6 @@ impl Parser {
         }
     }
 
-    /// Precedence climbing: parse operators binding at least as tight as
-    /// `min_power`, leaving looser ones to the caller.
     fn parse_binary(&mut self, min_power: u8) -> AstExpr {
         let mut lhs = self.parse_factor();
 

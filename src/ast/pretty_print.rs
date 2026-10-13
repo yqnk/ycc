@@ -1,3 +1,5 @@
+use crate::ast::AstBlockItem;
+
 use super::nodes::{AstExpr, AstFunc, AstProgram, AstStatement};
 use super::visitor::Visitor;
 
@@ -35,6 +37,7 @@ impl Visitor for AstPrettyPrinter {
     type Func = ();
     type Statement = ();
     type Expr = ();
+    type BlockItem = ();
 
     fn visit_program(&mut self, program: &AstProgram) -> Self::Program {
         iprintln!(self, "PROGRAM");
@@ -46,8 +49,8 @@ impl Visitor for AstPrettyPrinter {
         iprintln!(self, "body:");
 
         self.nested(|pp| {
-            for statement in &func.statements {
-                statement.accept(pp);
+            for block in &func.blocks {
+                block.accept(pp);
             }
         });
     }
@@ -64,22 +67,7 @@ impl Visitor for AstPrettyPrinter {
                 self.nested(|pp| exp.accept(pp));
                 iprintln!(self, ")");
             }
-            AstStatement::VarDec {
-                var_type,
-                name,
-                exp,
-            } => {
-                iprintln!(self, "VARDEC (");
-                self.nested(|pp| {
-                    iprintln!(pp, format!("{:?} {}", var_type, name));
-                    if let Some(e) = exp {
-                        iprintln!(pp, "=");
-                        e.accept(pp);
-                    }
-                });
-
-                iprintln!(self, ")");
-            }
+            _ => unimplemented!(),
         }
     }
 
@@ -110,6 +98,32 @@ impl Visitor for AstPrettyPrinter {
                     None => iprintln!(self, format!("ASSIGN {} =", lhs)),
                 }
                 self.nested(|pp| rhs.accept(pp));
+            }
+        }
+    }
+
+    fn visit_blockitem(&mut self, expr: &super::AstBlockItem) -> Self::BlockItem {
+        match expr {
+            AstBlockItem::Statement { statement } => {
+                iprintln!(self, "BLOCK (");
+                self.nested(|pp| statement.accept(pp));
+                iprintln!(self, ")");
+            }
+            AstBlockItem::VarDec {
+                var_type,
+                name,
+                exp,
+            } => {
+                iprintln!(self, "VARDEC (");
+                self.nested(|pp| {
+                    iprintln!(pp, format!("{:?} {}", var_type, name));
+                    if let Some(e) = exp {
+                        iprintln!(pp, "=");
+                        e.accept(pp);
+                    }
+                });
+
+                iprintln!(self, ")");
             }
         }
     }

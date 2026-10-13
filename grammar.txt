@@ -1,9 +1,17 @@
 <program> ::= <function>
-<function> ::= "int" <id> "(" ")" "{" { <statement> } "}"
+
 <statement> ::= "return" <exp> ";"
               | <exp> ";"
-              | "int" <id> [ = <exp>] ";" 
-<exp> ::= <id> <assign_op> <exp>  (right-associative)
+              | "if" "(" <exp> ")" <statement> [ "else" <statement> ]
+
+<vardec> ::= "int" <id> [ = <exp> ] ";" 
+
+<block-item> ::= <statement>
+               | <vardec>
+
+<function> ::= "int" <id> "(" ")" "{" { <block-item> } "}"
+
+<exp> ::= <id> <assign_op> <exp>
         | <exp> <binop> <exp>
         | <unary_op> <exp>
         | "(" <exp> ")"
@@ -32,3 +40,7 @@ precedence for operators:
 
 All binary operators are left-associative.
 Any kind of assignment is right-associative.
+
+TODO:
+- postfix/prefix increment/decrement
+- comma operator

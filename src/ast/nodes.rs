@@ -6,10 +6,21 @@ pub struct AstProgram {
     pub main: AstFunc,
 }
 
+pub enum AstBlockItem {
+    Statement {
+        statement: AstStatement,
+    },
+    VarDec {
+        var_type: Type,
+        name: String,
+        exp: Option<AstExpr>,
+    },
+}
+
 pub struct AstFunc {
     pub ret_type: Type,
     pub name: String,
-    pub statements: Vec<AstStatement>,
+    pub blocks: Vec<AstBlockItem>,
 }
 
 pub enum AstStatement {
@@ -19,10 +30,10 @@ pub enum AstStatement {
     Expr {
         exp: AstExpr,
     },
-    VarDec {
-        var_type: Type,
-        name: String,
-        exp: Option<AstExpr>,
+    Cond {
+        exp: AstExpr,
+        cond_body: Box<AstStatement>,
+        else_body: Option<Box<AstStatement>>,
     },
 }
 

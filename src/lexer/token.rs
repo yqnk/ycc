@@ -17,6 +17,9 @@ pub enum TokenType {
     Keyword(Keyword),
     Constant(i32),
 
+    Colon,
+    QuestionMark,
+
     Semi,
     Eof,
     None,

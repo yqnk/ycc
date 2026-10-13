@@ -111,6 +111,9 @@ impl Lexer {
             '|' if self.consume_if('|') => TokenType::Binop(Binop::LogicalOr),
             '|' => self.maybe_assign(Binop::BitwiseOr),
 
+            ':' => TokenType::Colon,
+            '?' => TokenType::QuestionMark,
+
             c => panic!("unexpected character '{}' at offset {}", c, self.pos - 1),
         }
     }
