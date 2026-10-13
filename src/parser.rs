@@ -1,7 +1,6 @@
 use crate::{
-    Binop,
     ast::*,
-    lexer::{Keyword, Lexer, TokenType},
+    lexer::{Keyword, LOWEST_PRECEDENCE, Lexer, TokenType},
 };
 
 #[derive(Debug)]
@@ -109,7 +108,7 @@ impl Parser {
         let name = self.parse_identifier();
 
         let exp = if self.eat_if(&TokenType::Assign(None)) {
-            Some(self.parse_expr())
+            Some(self.parse_expr(LOWEST_PRECEDENCE))
         } else {
             None
         };
@@ -128,7 +127,7 @@ impl Parser {
             TokenType::Keyword(Keyword::Return) => {
                 self.eat(&TokenType::Keyword(Keyword::Return));
 
-                let exp = self.parse_expr();
+                let exp = self.parse_expr(LOWEST_PRECEDENCE);
                 self.eat(&TokenType::Semi);
 
                 AstStatement::Return { exp }
@@ -137,7 +136,7 @@ impl Parser {
                 self.eat(&TokenType::Keyword(Keyword::If));
 
                 self.eat(&TokenType::LParen);
-                let exp = self.parse_expr();
+                let exp = self.parse_expr(LOWEST_PRECEDENCE);
                 self.eat(&TokenType::RParen);
 
                 let if_body = self.parse_braced_block_item();
@@ -160,7 +159,7 @@ impl Parser {
                 }
             }
             _ => {
-                let exp = self.parse_expr();
+                let exp = self.parse_expr(LOWEST_PRECEDENCE);
                 self.eat(&TokenType::Semi);
 
                 AstStatement::Expr { exp }
@@ -176,45 +175,43 @@ impl Parser {
         body
     }
 
-    fn parse_expr(&mut self) -> AstExpr {
-        let lhs = self.parse_binary(Binop::LOWEST_PRECEDENCE);
-
-        let TokenType::Assign(op) = self.peek() else {
-            return lhs;
-        };
-
-        self.lexer.next_token_pop();
-
-        let AstExpr::Var(name) = lhs else {
-            panic!(
-                "expected variable on the left of an assignment, got: {:?}",
-                lhs
-            );
-        };
-
-        AstExpr::Assignment {
-            op,
-            lhs: name,
-            rhs: Box::new(self.parse_expr()),
-        }
-    }
-
-    fn parse_binary(&mut self, min_power: u8) -> AstExpr {
+    fn parse_expr(&mut self, min_power: u8) -> AstExpr {
         let mut lhs = self.parse_factor();
 
-        while let Some(op) = self.peek().as_binop() {
-            let power = op.precedence();
+        while let Some(power) = self.peek().infix_precedence() {
             if power < min_power {
                 break;
             }
-            self.lexer.next_token_pop();
 
-            // power + 1: every C binary operator is left-associative
-            let rhs = self.parse_binary(power + 1);
-            lhs = AstExpr::Binary {
-                op,
-                lhs: Box::new(lhs),
-                rhs: Box::new(rhs),
+            let token = self.lexer.next_token_pop();
+            lhs = match token {
+                TokenType::Assign(op) => {
+                    let AstExpr::Var(name) = lhs else {
+                        panic!("expected variable on the left of an assignment, got: {lhs:?}");
+                    };
+
+                    AstExpr::Assignment {
+                        op,
+                        lhs: name,
+                        rhs: Box::new(self.parse_expr(power)),
+                    }
+                }
+                TokenType::QuestionMark => {
+                    let then_exp = self.parse_expr(LOWEST_PRECEDENCE);
+                    self.eat(&TokenType::Colon);
+
+                    AstExpr::Conditional {
+                        cond: Box::new(lhs),
+                        then_exp: Box::new(then_exp),
+                        else_exp: Box::new(self.parse_expr(power)),
+                    }
+                }
+                TokenType::Binop(op) => AstExpr::Binary {
+                    op,
+                    lhs: Box::new(lhs),
+                    rhs: Box::new(self.parse_expr(power + 1)),
+                },
+                _ => unreachable!(),
             };
         }
 
@@ -233,7 +230,7 @@ impl Parser {
 
         match token {
             TokenType::LParen => {
-                let exp = self.parse_expr();
+                let exp = self.parse_expr(LOWEST_PRECEDENCE);
                 self.eat(&TokenType::RParen);
                 exp
             }

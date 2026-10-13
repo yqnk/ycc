@@ -53,6 +53,11 @@ pub enum AstExpr {
         op: Unop,
         operand: Box<AstExpr>,
     },
+    Conditional {
+        cond: Box<AstExpr>,
+        then_exp: Box<AstExpr>,
+        else_exp: Box<AstExpr>,
+    },
     Var(String),
     Int(i32),
 }

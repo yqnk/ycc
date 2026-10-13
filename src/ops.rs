@@ -29,24 +29,21 @@ pub enum Unop {
 }
 
 impl Binop {
-    pub const ASSIGNMENT_PRECEDENCE: u8 = 1;
-    pub const LOWEST_PRECEDENCE: u8 = Self::ASSIGNMENT_PRECEDENCE + 1;
-
     pub fn precedence(&self) -> u8 {
         match self {
-            Binop::LogicalOr => 2,
-            Binop::LogicalAnd => 3,
-            Binop::BitwiseOr => 4,
-            Binop::BitwiseXor => 5,
-            Binop::BitwiseAnd => 6,
-            Binop::EqualTo | Binop::NotEqualTo => 7,
+            Binop::LogicalOr => 3,
+            Binop::LogicalAnd => 4,
+            Binop::BitwiseOr => 5,
+            Binop::BitwiseXor => 6,
+            Binop::BitwiseAnd => 7,
+            Binop::EqualTo | Binop::NotEqualTo => 8,
             Binop::LessThan
             | Binop::LessThanOrEqualTo
             | Binop::GreaterThan
-            | Binop::GreaterThanOrEqualTo => 8,
-            Binop::LShift | Binop::RShift => 9,
-            Binop::Add | Binop::Sub => 10,
-            Binop::Mul | Binop::Div | Binop::Mod => 11,
+            | Binop::GreaterThanOrEqualTo => 9,
+            Binop::LShift | Binop::RShift => 10,
+            Binop::Add | Binop::Sub => 11,
+            Binop::Mul | Binop::Div | Binop::Mod => 12,
         }
     }
 

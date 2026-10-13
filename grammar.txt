@@ -12,6 +12,7 @@
 <function> ::= "int" <id> "(" ")" "{" { <block-item> } "}"
 
 <exp> ::= <id> <assign_op> <exp>
+        | <exp> "?" <exp> ":" <exp>
         | <exp> <binop> <exp>
         | <unary_op> <exp>
         | "(" <exp> ")"
@@ -27,20 +28,14 @@
 ----
 precedence for operators:
   1  =  +=  -=  *=  /=  %=  <<=  >>=  &=  |=  ^=
-  2  ||
-  3  &&
-  4  |
-  5  ^
-  6  &
-  7  ==  !=
-  8  <  <=  >  >=
-  9  <<  >>
-  10 +  -
-  11 *  /  %
-
-All binary operators are left-associative.
-Any kind of assignment is right-associative.
-
-TODO:
-- postfix/prefix increment/decrement
-- comma operator
+  2  ?:
+  3  ||
+  4  &&
+  5  |
+  6  ^
+  7  &
+  8  ==  !=
+  9  <  <=  >  >=
+  10 <<  >>
+  11 +  -
+  12 *  /  %

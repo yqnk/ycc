@@ -104,6 +104,22 @@ impl Visitor for AstPrettyPrinter {
                 self.nested(|pp| operand.accept(pp));
                 iprintln!(self, ")");
             }
+            AstExpr::Conditional {
+                cond,
+                then_exp,
+                else_exp,
+            } => {
+                iprintln!(self, "CONDITIONAL (");
+                self.nested(|pp| {
+                    iprintln!(pp, "cond:");
+                    cond.accept(pp);
+                    iprintln!(pp, "then:");
+                    then_exp.accept(pp);
+                    iprintln!(pp, "else:");
+                    else_exp.accept(pp);
+                });
+                iprintln!(self, ")");
+            }
             AstExpr::Int(value) => {
                 iprintln!(self, format!("INT {}", value));
             }

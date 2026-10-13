@@ -25,7 +25,20 @@ pub enum TokenType {
     None,
 }
 
+pub const ASSIGNMENT_PRECEDENCE: u8 = 1;
+pub const CONDITIONAL_PRECEDENCE: u8 = 2;
+pub const LOWEST_PRECEDENCE: u8 = ASSIGNMENT_PRECEDENCE;
+
 impl TokenType {
+    pub fn infix_precedence(&self) -> Option<u8> { // infix = op can be like this <exp> op <exp>
+        match self {
+            TokenType::Assign(_) => Some(ASSIGNMENT_PRECEDENCE),
+            TokenType::QuestionMark => Some(CONDITIONAL_PRECEDENCE),
+            TokenType::Binop(op) => Some(op.precedence()),
+            _ => None,
+        }
+    }
+
     pub fn is_keyword(&self) -> bool {
         matches!(self, TokenType::Keyword(_))
     }
