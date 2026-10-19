@@ -231,6 +231,7 @@ impl Visitor for X86Backend {
 
                 self.instr("movq", &format!("%rax, {}(%rbp)", offset));
             }
+            _ => unreachable!()
         }
     }
 

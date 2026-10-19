@@ -1,6 +1,6 @@
 use crate::{
     ast::*,
-    lexer::{Keyword, LOWEST_PRECEDENCE, Lexer, TokenType},
+    lexer::{Keyword, LOWEST_PRECEDENCE, Lexer, Token, TokenType},
 };
 
 #[derive(Debug)]
@@ -16,22 +16,35 @@ impl Parser {
     }
 
     pub fn peek(&mut self) -> TokenType {
-        self.lexer.next_token_peek()
+        self.lexer.peek_token().r#type
     }
 
-    pub fn eat(&mut self, expected: &TokenType) -> TokenType {
-        let token = self.lexer.next_token_pop();
-        if &token != expected {
-            panic!("syntax error: expected {expected:?} but got {token:?} while parsing");
+    /// `file:line:col` of a token, for diagnostic messages.
+    pub fn loc(&self, token: &Token) -> String {
+        self.lexer.source.fmt_span(token.span)
+    }
+
+    pub fn eat(&mut self, expected: &TokenType) -> Token {
+        let token = self.lexer.token_pop();
+        if &token.r#type != expected {
+            panic!(
+                "{}: syntax error: expected {expected:?} but got {:?}",
+                self.loc(&token),
+                token.r#type
+            );
         }
 
         token
     }
 
-    pub fn eat_matching(&mut self, what: &str, pred: impl Fn(&TokenType) -> bool) -> TokenType {
-        let token = self.lexer.next_token_pop();
-        if !pred(&token) {
-            panic!("syntax error: expected {what} but got {token:?} while parsing");
+    pub fn eat_matching(&mut self, what: &str, pred: impl Fn(&TokenType) -> bool) -> Token {
+        let token = self.lexer.token_pop();
+        if !pred(&token.r#type) {
+            panic!(
+                "{}: syntax error: expected {what} but got {:?}",
+                self.loc(&token),
+                token.r#type
+            );
         }
 
         token

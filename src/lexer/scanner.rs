@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
-use std::fs;
 
+use crate::lexer::source::{SourceFile, Span};
+use crate::lexer::token::Token;
 use crate::ops::{Binop, Unop};
 
 use super::keyword::Keyword;
@@ -8,44 +9,62 @@ use super::token::TokenType;
 
 #[derive(Debug)]
 pub struct Lexer {
-    pub content: Vec<u8>,
+    pub source: SourceFile,
     pub pos: usize,
 
-    pub token_queue: VecDeque<TokenType>,
+    tok_start: usize, // token start, token end will be `pos`
+
+    pub token_queue: VecDeque<Token>,
 }
 
 impl Lexer {
     pub fn init(file_path: &str) -> Lexer {
-        let content = fs::read(file_path).expect("failed to read input file");
-        let token_queue = VecDeque::new();
-
         Lexer {
-            content,
+            source: SourceFile::read(file_path),
             pos: 0,
-            token_queue,
+
+            tok_start: 0,
+
+            token_queue: VecDeque::new(),
         }
     }
 
-    fn peek(&self) -> Option<char> {
-        self.content.get(self.pos).map(|&b| b as char)
+    fn tok_span(&self) -> Span {
+        Span::new(self.tok_start, self.pos)
     }
 
-    pub fn lexer_getc(&mut self) -> Option<char> {
-        let c = self.peek()?;
+    fn tok_loc(&self) -> String {
+        self.source.fmt_span(self.tok_span())
+    }
+
+    fn token(&self, r#type: TokenType) -> Token {
+        Token {
+            span: self.tok_span(),
+            r#type,
+        }
+    }
+
+    fn peek_raw(&self) -> Option<char> {
+        self.source.content.get(self.pos).map(|&b| b as char)
+    }
+
+    fn bump(&mut self) -> Option<char> {
+        let c = self.peek_raw()?;
         self.pos += 1;
 
         Some(c)
     }
 
     fn skip_whitespace(&mut self) {
-        while self.peek().is_some_and(|c| c.is_ascii_whitespace()) {
-            self.pos += 1;
+        while self.peek_raw().is_some_and(|c| c.is_ascii_whitespace()) {
+            self.bump();
         }
     }
 
     fn consume_if(&mut self, expected: char) -> bool {
-        if self.peek() == Some(expected) {
-            self.pos += 1;
+        if self.peek_raw() == Some(expected) {
+            self.bump();
+
             true
         } else {
             false
@@ -63,16 +82,16 @@ impl Lexer {
     fn lex_while(&mut self, pred: impl Fn(char) -> bool) -> String {
         let start = self.pos;
 
-        while self.peek().is_some_and(&pred) {
-            self.pos += 1;
+        while self.peek_raw().is_some_and(&pred) {
+            self.bump();
         }
 
-        String::from_utf8_lossy(&self.content[start..self.pos]).into_owned()
+        String::from_utf8_lossy(&self.source.content[start..self.pos]).into_owned()
     }
 
     fn next_token_operator(&mut self) -> TokenType {
         let c = self
-            .lexer_getc()
+            .bump()
             .expect("next_token_operator called at end of input");
 
         match c {
@@ -114,7 +133,7 @@ impl Lexer {
             ':' => TokenType::Colon,
             '?' => TokenType::QuestionMark,
 
-            c => panic!("unexpected character '{}' at offset {}", c, self.pos - 1),
+            c => panic!("{}: unexpected character '{}'", self.tok_loc(), c),
         }
     }
 
@@ -123,7 +142,12 @@ impl Lexer {
 
         match digits.parse::<i32>() {
             Ok(n) => TokenType::Constant(n),
-            Err(e) => panic!("invalid integer literal '{}': {}", digits, e),
+            Err(e) => panic!(
+                "{}: invalid integer literal '{}': {}",
+                self.tok_loc(),
+                digits,
+                e
+            ),
         }
     }
 
@@ -136,26 +160,30 @@ impl Lexer {
         }
     }
 
-    pub fn next_token_peek(&mut self) -> TokenType {
+    pub fn peek_token(&mut self) -> Token {
         if let Some(front) = self.token_queue.front() {
             return front.clone();
         }
 
         self.skip_whitespace();
 
-        let token_type = match self.peek() {
+        self.tok_start = self.pos;
+
+        let token_type = match self.peek_raw() {
             None => TokenType::Eof,
             Some(c) if c.is_ascii_digit() => self.next_token_int(),
             Some(c) if c.is_ascii_alphabetic() || c == '_' => self.next_token_word(),
             Some(_) => self.next_token_operator(),
         };
 
-        self.token_queue.push_back(token_type.clone());
-        token_type
+        let token = self.token(token_type);
+
+        self.token_queue.push_back(token.clone());
+        token
     }
 
-    pub fn next_token_pop(&mut self) -> TokenType {
-        let _ = self.next_token_peek();
+    pub fn token_pop(&mut self) -> Token {
+        let _ = self.peek_token();
 
         if let Some(t) = self.token_queue.pop_front() {
             return t;
