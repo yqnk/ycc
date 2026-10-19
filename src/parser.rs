@@ -19,7 +19,6 @@ impl Parser {
         self.lexer.peek_token().r#type
     }
 
-    /// `file:line:col` of a token, for diagnostic messages.
     pub fn loc(&self, token: &Token) -> String {
         self.lexer.source.fmt_span(token.span)
     }
@@ -52,7 +51,7 @@ impl Parser {
 
     pub fn eat_if(&mut self, expected: &TokenType) -> bool {
         if &self.peek() == expected {
-            self.lexer.next_token_pop();
+            self.lexer.token_pop();
             return true;
         }
 
@@ -66,14 +65,14 @@ impl Parser {
     }
 
     fn parse_type(&mut self) -> Type {
-        match self.eat_matching("a type specifier", |t| t.is_type_specifier()) {
+        match self.eat_matching("a type specifier", |t| t.is_type_specifier()).r#type {
             TokenType::Keyword(kw) => Type::from_keyword(&kw),
             _ => unreachable!(),
         }
     }
 
     fn parse_identifier(&mut self) -> String {
-        match self.eat_matching("an identifier", |t| t.is_ident()) {
+        match self.eat_matching("an identifier", |t| t.is_ident()).r#type {
             TokenType::Identifier(str) => str,
             _ => unreachable!(),
         }
@@ -84,6 +83,7 @@ impl Parser {
         let name = self.parse_identifier();
 
         self.eat(&TokenType::LParen);
+        // parse params
         self.eat(&TokenType::RParen);
         self.eat(&TokenType::LBracket);
 
@@ -91,8 +91,14 @@ impl Parser {
 
         loop {
             match self.peek() {
-                TokenType::RBracket => break,
-                TokenType::Eof => panic!("unterminated function body: missing '}}'"),
+                TokenType::RBracket => break, // hmmm
+                TokenType::Eof => {
+                    let eof = self.lexer.peek_token();
+                    panic!(
+                        "{}: unterminated function body: missing '}}'",
+                        self.loc(&eof)
+                    )
+                }
                 _ => blocks.push(self.parse_block_item()),
             }
         }
@@ -196,8 +202,8 @@ impl Parser {
                 break;
             }
 
-            let token = self.lexer.next_token_pop();
-            lhs = match token {
+            let token = self.lexer.token_pop();
+            lhs = match token.r#type {
                 TokenType::Assign(op) => {
                     let AstExpr::Var(name) = lhs else {
                         panic!("expected variable on the left of an assignment, got: {lhs:?}");
@@ -232,16 +238,16 @@ impl Parser {
     }
 
     fn parse_factor(&mut self) -> AstExpr {
-        let token = self.lexer.next_token_pop();
+        let token = self.lexer.token_pop();
 
-        if let Some(op) = token.as_unop() {
+        if let Some(op) = token.r#type.as_unop() {
             return AstExpr::Unary {
                 op,
                 operand: Box::new(self.parse_factor()),
             };
         }
 
-        match token {
+        match token.r#type {
             TokenType::LParen => {
                 let exp = self.parse_expr(LOWEST_PRECEDENCE);
                 self.eat(&TokenType::RParen);
@@ -249,8 +255,12 @@ impl Parser {
             }
             TokenType::Constant(value) => AstExpr::Int(value),
             TokenType::Identifier(name) => AstExpr::Var(name),
-            t => {
-                unimplemented!("unknown factor token: {:?}", t)
+            ref t => {
+                unimplemented!(
+                    "{}: unknown factor token: {:?}",
+                    self.lexer.source.fmt_span(token.span),
+                    t
+                )
             }
         }
     }

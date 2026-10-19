@@ -24,6 +24,7 @@ pub struct SourceFile {
     pub name: String,
     pub content: Vec<u8>,
 
+    // offset in bytes of every line aka. offset of the first char of the line
     line_starts: Vec<usize>,
 }
 
