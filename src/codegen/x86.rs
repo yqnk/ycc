@@ -172,7 +172,27 @@ impl Visitor for X86Backend {
                 self.instr("ret", "");
             }
             AstStatement::Expr { exp } => exp.accept(self),
-            _ => unimplemented!(),
+            AstStatement::Cond {
+                exp,
+                if_body,
+                else_body,
+            } => {
+                let id = self.next_label_id();
+                let else_label = format!(".L_else_{}", id);
+                let post_label = format!(".L_post_{}", id);
+
+                exp.accept(self);
+
+                self.instr("cmpq", "$0, %rax");
+                self.instr("je", &format!("{}", else_label));
+                if_body.accept(self);
+                self.instr("jmp", &format!("{}", post_label));
+                self.label(&else_label);
+                if let Some(e) = else_body {
+                    e.accept(self);
+                }
+                self.label(&post_label);
+            }
         }
     }
 
@@ -231,7 +251,25 @@ impl Visitor for X86Backend {
 
                 self.instr("movq", &format!("%rax, {}(%rbp)", offset));
             }
-            _ => unreachable!()
+            AstExpr::Conditional {
+                cond,
+                then_exp,
+                else_exp,
+            } => {
+                let id = self.next_label_id();
+                let else_label = format!(".L_else_{}", id);
+                let post_label = format!(".L_post_{}", id);
+
+                cond.accept(self);
+
+                self.instr("cmpq", "$0, %rax");
+                self.instr("je", &format!("{}", else_label));
+                then_exp.accept(self);
+                self.instr("jmp", &format!("{}", post_label));
+                self.label(&else_label);
+                else_exp.accept(self);
+                self.label(&post_label);
+            }
         }
     }
 

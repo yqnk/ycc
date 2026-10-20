@@ -65,7 +65,10 @@ impl Parser {
     }
 
     fn parse_type(&mut self) -> Type {
-        match self.eat_matching("a type specifier", |t| t.is_type_specifier()).r#type {
+        match self
+            .eat_matching("a type specifier", |t| t.is_type_specifier())
+            .r#type
+        {
             TokenType::Keyword(kw) => Type::from_keyword(&kw),
             _ => unreachable!(),
         }
@@ -158,14 +161,14 @@ impl Parser {
                 let exp = self.parse_expr(LOWEST_PRECEDENCE);
                 self.eat(&TokenType::RParen);
 
-                let if_body = self.parse_braced_block_item();
+                let if_body = self.parse_compound_statement();
 
                 let else_body = if self.eat_if(&TokenType::Keyword(Keyword::Else)) {
                     Some(Box::new(match self.peek() {
                         TokenType::Keyword(Keyword::If) => AstBlockItem::Statement {
                             statement: self.parse_statement(),
                         },
-                        _ => self.parse_braced_block_item(),
+                        _ => self.parse_compound_statement(),
                     }))
                 } else {
                     None
@@ -186,7 +189,7 @@ impl Parser {
         }
     }
 
-    fn parse_braced_block_item(&mut self) -> AstBlockItem {
+    fn parse_compound_statement(&mut self) -> AstBlockItem {
         self.eat(&TokenType::LBracket);
         let body = self.parse_block_item();
         self.eat(&TokenType::RBracket);
