@@ -144,6 +144,16 @@ impl Parser {
         }
     }
 
+    fn parse_block_statement(&mut self) -> AstStatement {
+        self.eat(&TokenType::LBracket);
+        let mut body: Vec<AstBlockItem> = Vec::new();
+        while !self.eat_if(&TokenType::RBracket) {
+            body.push(self.parse_block_item());
+        }
+
+        AstStatement::Block { items: body }
+    }
+
     fn parse_statement(&mut self) -> AstStatement {
         match self.peek() {
             TokenType::Keyword(Keyword::Return) => {
@@ -161,15 +171,10 @@ impl Parser {
                 let exp = self.parse_expr(LOWEST_PRECEDENCE);
                 self.eat(&TokenType::RParen);
 
-                let if_body = self.parse_compound_statement();
+                let if_body = self.parse_block_statement();
 
                 let else_body = if self.eat_if(&TokenType::Keyword(Keyword::Else)) {
-                    Some(Box::new(match self.peek() {
-                        TokenType::Keyword(Keyword::If) => AstBlockItem::Statement {
-                            statement: self.parse_statement(),
-                        },
-                        _ => self.parse_compound_statement(),
-                    }))
+                    Some(Box::new(self.parse_block_statement()))
                 } else {
                     None
                 };
@@ -189,14 +194,6 @@ impl Parser {
         }
     }
 
-    fn parse_compound_statement(&mut self) -> AstBlockItem {
-        self.eat(&TokenType::LBracket);
-        let body = self.parse_block_item();
-        self.eat(&TokenType::RBracket);
-
-        body
-    }
-
     fn parse_expr(&mut self, min_power: u8) -> AstExpr {
         let mut lhs = self.parse_factor();
 
@@ -209,7 +206,7 @@ impl Parser {
             lhs = match token.r#type {
                 TokenType::Assign(op) => {
                     let AstExpr::Var(name) = lhs else {
-                        panic!("expected variable on the left of an assignment, got: {lhs:?}");
+                        panic!("expected variable on the left of an assignment, got: {lhs:?}",);
                     };
 
                     AstExpr::Assignment {

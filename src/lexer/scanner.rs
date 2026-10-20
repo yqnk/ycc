@@ -133,7 +133,12 @@ impl Lexer {
             ':' => TokenType::Colon,
             '?' => TokenType::QuestionMark,
 
-            c => panic!("{}: unexpected character '{}'", self.tok_loc(), c),
+            c => panic!(
+                "{}: unexpected character '{}':\n{}",
+                self.tok_loc(),
+                c,
+                self.source.snippet(self.tok_span())
+            ),
         }
     }
 

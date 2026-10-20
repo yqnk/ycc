@@ -86,6 +86,13 @@ impl Visitor for AstPrettyPrinter {
                 }
                 iprintln!(self, ")");
             }
+            AstStatement::Block { items } => {
+                iprintln!(self, "BLOCK {");
+                self.nested(|pp| {
+                    items.iter().for_each(|i| i.accept(pp));
+                });
+                iprintln!(self, "}");
+            }
         }
     }
 

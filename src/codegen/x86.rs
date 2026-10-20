@@ -193,6 +193,9 @@ impl Visitor for X86Backend {
                 }
                 self.label(&post_label);
             }
+            AstStatement::Block { items } => {
+                items.iter().for_each(|i| i.accept(self));
+            }
         }
     }
 

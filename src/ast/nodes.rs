@@ -32,8 +32,11 @@ pub enum AstStatement {
     },
     Cond {
         exp: AstExpr,
-        if_body: Box<AstBlockItem>,
-        else_body: Option<Box<AstBlockItem>>,
+        if_body: Box<AstStatement>,
+        else_body: Option<Box<AstStatement>>,
+    },
+    Block {
+        items: Vec<AstBlockItem>,
     },
 }
 

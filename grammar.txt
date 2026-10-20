@@ -3,6 +3,7 @@
 <statement> ::= "return" <exp> ";"
               | <exp> ";"
               | "if" "(" <exp> ")" <statement> [ "else" <statement> ]
+              | "{" { <block-item> } "}"}
 
 <vardec> ::= "int" <id> [ = <exp> ] ";" 
 

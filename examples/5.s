@@ -8,7 +8,7 @@ main:
 	pushq	%rax
 	movq	-8(%rbp), %rax
 	pushq	%rax
-	movq	$9, %rax
+	movq	$8, %rax
 	movq	%rax, %rcx
 	popq	%rax
 	cmpq	%rcx, %rax
@@ -18,9 +18,19 @@ main:
 	je	.L_else_0
 	movq	$16, %rax
 	movq	%rax, -16(%rbp)
+	movq	-8(%rbp), %rax
+	movq	%rax, %rcx
+	movq	-16(%rbp), %rax
+	addq	%rcx, %rax
+	movq	%rax, -16(%rbp)
 	jmp	.L_post_0
 .L_else_0:
 	movq	$67, %rax
+	movq	%rax, -16(%rbp)
+	movq	$2, %rax
+	movq	%rax, %rcx
+	movq	-16(%rbp), %rax
+	addq	%rcx, %rax
 	movq	%rax, -16(%rbp)
 .L_post_0:
 	movq	-16(%rbp), %rax
