@@ -20,7 +20,7 @@ pub enum AstBlockItem {
 pub struct AstFunc {
     pub ret_type: Type,
     pub name: String,
-    pub blocks: Vec<AstBlockItem>,
+    pub body: Vec<AstBlockItem>,
 }
 
 pub enum AstStatement {

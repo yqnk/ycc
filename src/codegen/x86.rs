@@ -1,9 +1,11 @@
-use std::{collections::HashMap, fmt::Write};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Write,
+};
 
 use crate::ast::{AstBlockItem, AstExpr, AstFunc, AstProgram, AstStatement, Type, Visitor};
 use crate::{Binop, Unop};
 
-// Default int value
 const DEFAULT_VALUE: i32 = 0;
 
 #[derive(Default)]
@@ -13,7 +15,9 @@ pub struct X86Backend {
     label_count: u32,
 
     stack_index: i64,
+
     var_map: HashMap<String, i64>,
+    scope_vars: HashSet<String>, // no shadowing so set is fine
 }
 
 impl X86Backend {
@@ -145,22 +149,21 @@ impl Visitor for X86Backend {
         self.label(&func.name);
         self.prologue();
 
-        for block in &func.blocks {
-            block.accept(self);
+        for item in &func.body {
+            item.accept(self);
         }
 
-        if let Some(AstBlockItem::Statement { statement }) = func.blocks.last()
-            && &func.name == "main"
-            && func.ret_type == Type::Int
-        {
-            match statement {
-                AstStatement::Return { exp: _ } => (),
-                _ => {
-                    self.instr("movq", &format!("${}, %rax", DEFAULT_VALUE));
-                    self.epilogue();
-                    self.instr("ret", "");
-                }
-            }
+        let ends_with_return = matches!(
+            func.body.last(),
+            Some(AstBlockItem::Statement {
+                statement: AstStatement::Return { .. }
+            })
+        );
+
+        if !ends_with_return && func.name == "main" && func.ret_type == Type::Int {
+            self.instr("movq", &format!("${}, %rax", DEFAULT_VALUE));
+            self.epilogue();
+            self.instr("ret", "");
         }
     }
 
@@ -194,7 +197,25 @@ impl Visitor for X86Backend {
                 self.label(&post_label);
             }
             AstStatement::Block { items } => {
+                // a block opens a scope based on it's parent (if it exists)
+                let outer_vars = self.var_map.clone();
+
+                // save parent scope
+                let outer_scope = std::mem::take(&mut self.scope_vars);
+
+                // save rsp before new scope
+                let outer_index = self.stack_index;
+
                 items.iter().for_each(|i| i.accept(self));
+
+                let reclaimed = outer_index - self.stack_index;
+                if reclaimed > 0 {
+                    self.instr("addq", &format!("${}, %rsp", reclaimed));
+                } // reset sp as it was before
+
+                self.var_map = outer_vars;
+                self.scope_vars = outer_scope;
+                self.stack_index = outer_index;
             }
         }
     }
@@ -286,7 +307,7 @@ impl Visitor for X86Backend {
                 name,
                 exp,
             } => {
-                if self.var_map.contains_key(name) {
+                if !self.scope_vars.insert(name.to_string()) {
                     panic!("variable declared twice: {}", name);
                 }
 

@@ -5,7 +5,7 @@ use super::visitor::Visitor;
 
 macro_rules! iprintln {
     ($astpp:ident, $body:expr) => {
-        println!("{}{}", " ".repeat($astpp.indent * 2), $body)
+        println!("{}{}", " ".repeat($astpp.indent * 4), $body)
     };
 }
 
@@ -49,8 +49,8 @@ impl Visitor for AstPrettyPrinter {
         iprintln!(self, "body:");
 
         self.nested(|pp| {
-            for block in &func.blocks {
-                block.accept(pp);
+            for item in &func.body {
+                item.accept(pp);
             }
         });
     }
@@ -78,10 +78,11 @@ impl Visitor for AstPrettyPrinter {
                     exp.accept(pp)
                 });
                 self.nested(|pp| {
-                    iprintln!(pp, "body:");
+                    iprintln!(pp, "then body:");
                     if_body.accept(pp);
                 });
                 if let Some(body) = else_body {
+                    iprintln!(self, "else body:");
                     self.nested(|pp| body.accept(pp));
                 }
                 iprintln!(self, ")");
@@ -145,11 +146,7 @@ impl Visitor for AstPrettyPrinter {
 
     fn visit_blockitem(&mut self, expr: &super::AstBlockItem) -> Self::BlockItem {
         match expr {
-            AstBlockItem::Statement { statement } => {
-                iprintln!(self, "BLOCK (");
-                self.nested(|pp| statement.accept(pp));
-                iprintln!(self, ")");
-            }
+            AstBlockItem::Statement { statement } => statement.accept(self),
             AstBlockItem::VarDec {
                 var_type,
                 name,

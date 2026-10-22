@@ -95,8 +95,8 @@ impl Lexer {
             .expect("next_token_operator called at end of input");
 
         match c {
-            '{' => TokenType::LBracket,
-            '}' => TokenType::RBracket,
+            '{' => TokenType::LBrace,
+            '}' => TokenType::RBrace,
             '(' => TokenType::LParen,
             ')' => TokenType::RParen,
             ';' => TokenType::Semi,

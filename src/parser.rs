@@ -88,31 +88,35 @@ impl Parser {
         self.eat(&TokenType::LParen);
         // parse params
         self.eat(&TokenType::RParen);
-        self.eat(&TokenType::LBracket);
 
-        let mut blocks = Vec::new();
-
-        loop {
-            match self.peek() {
-                TokenType::RBracket => break, // hmmm
-                TokenType::Eof => {
-                    let eof = self.lexer.peek_token();
-                    panic!(
-                        "{}: unterminated function body: missing '}}'",
-                        self.loc(&eof)
-                    )
-                }
-                _ => blocks.push(self.parse_block_item()),
-            }
-        }
-
-        self.eat(&TokenType::RBracket);
+        let body = self.parse_block_items("function body");
 
         AstFunc {
             ret_type,
             name,
-            blocks,
+            body,
         }
+    }
+
+    fn parse_block_items(&mut self, what: &str) -> Vec<AstBlockItem> {
+        self.eat(&TokenType::LBrace);
+
+        let mut items = Vec::new();
+
+        loop {
+            match self.peek() {
+                TokenType::RBrace => break,
+                TokenType::Eof => {
+                    let eof = self.lexer.peek_token();
+                    panic!("{}: unterminated {what}: missing '}}'", self.loc(&eof))
+                }
+                _ => items.push(self.parse_block_item()),
+            }
+        }
+
+        self.eat(&TokenType::RBrace);
+
+        items
     }
 
     fn parse_block_item(&mut self) -> AstBlockItem {
@@ -145,13 +149,9 @@ impl Parser {
     }
 
     fn parse_block_statement(&mut self) -> AstStatement {
-        self.eat(&TokenType::LBracket);
-        let mut body: Vec<AstBlockItem> = Vec::new();
-        while !self.eat_if(&TokenType::RBracket) {
-            body.push(self.parse_block_item());
+        AstStatement::Block {
+            items: self.parse_block_items("block"),
         }
-
-        AstStatement::Block { items: body }
     }
 
     fn parse_statement(&mut self) -> AstStatement {
@@ -171,10 +171,10 @@ impl Parser {
                 let exp = self.parse_expr(LOWEST_PRECEDENCE);
                 self.eat(&TokenType::RParen);
 
-                let if_body = self.parse_block_statement();
+                let if_body = self.parse_statement();
 
                 let else_body = if self.eat_if(&TokenType::Keyword(Keyword::Else)) {
-                    Some(Box::new(self.parse_block_statement()))
+                    Some(Box::new(self.parse_statement()))
                 } else {
                     None
                 };
@@ -185,6 +185,7 @@ impl Parser {
                     else_body,
                 }
             }
+            TokenType::LBrace => self.parse_block_statement(),
             _ => {
                 let exp = self.parse_expr(LOWEST_PRECEDENCE);
                 self.eat(&TokenType::Semi);

@@ -3,7 +3,7 @@
 <statement> ::= "return" <exp> ";"
               | <exp> ";"
               | "if" "(" <exp> ")" <statement> [ "else" <statement> ]
-              | "{" { <block-item> } "}"}
+              | "{" { <block-item> } "}"
 
 <vardec> ::= "int" <id> [ = <exp> ] ";" 
 
@@ -13,7 +13,7 @@
 <function> ::= "int" <id> "(" ")" "{" { <block-item> } "}"
 
 <exp> ::= <id> <assign_op> <exp>
-        | <exp> "?" <exp> ":" <exp> // FIXME: should be <exp> ? [ <exp> ":" <exp> ] but with a differenciation.
+        | <exp> "?" <exp> ":" <exp>
         | <exp> <binop> <exp>
         | <unary_op> <exp>
         | "(" <exp> ")"

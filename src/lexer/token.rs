@@ -7,8 +7,8 @@ use super::keyword::Keyword;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenType {
-    LBracket,
-    RBracket,
+    LBrace,
+    RBrace,
     LParen,
     RParen,
 
