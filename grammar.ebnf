@@ -1,0 +1,56 @@
+program ::= function
+
++Functions
+
+func-signature  ::= "int" identifier '(' ')'
+func-def        ::= func-signature compound-stmt
+
++Syntax::Statements
+
+statement-list ::= { statement }
+
+statement ::= return-stmt 
+            | simple-stmt
+            | if-stmt
+            | compound-stmt
+
+compound-stmt   ::= '{' statement-list '}'
+simple-stmt     ::= exp ";"
+return-stmt     ::= "return" exp ";"
+if-stmt         ::= "if" "(" exp ")" statement [ "else" statement ]
+
++Syntax::Assign
+
+assign ::= "int" identifier [ = exp ] ";" 
+
++Syntax::Expressions
+
+exp   ::= identifier assign_op exp
+        | exp "?" exp ":" exp
+        | exp binop exp
+        | unary_op exp
+        | "(" exp ")"
+
++Lexical::Operands
+
+assign_op ::= "=" | "+=" | "-=" | "*=" | "/=" | "%="
+              | "<<=" | ">>=" | "&=" | "|=" | "^="
+unop      ::= "!" 
+            | "~" 
+            | "-" 
+            | "+"
+binop     ::= "||" | "&&" | "|" | "^" | "&"
+            | "==" | "!=" | "<" | "<=" | ">" | ">="
+            | "<<" | ">>" | "+" | "-" | "*" | "/" | "%"
+
++Lexical::Tokens
+
+identifier	::= ( letter | '_' ) { letter | digit | '_' }
+
+letter		::= upper-case | lower-case
+lower-case	::= 'a' | 'b' | 'c' | ... | 'x' | 'y' | 'z'
+upper-case	::= 'A' | 'B' | 'C' | ... | 'X' | 'Y' | 'Z'
+
+digit		::= oct-digit | '8' | '9'
+oct-digit	::= bin-digit | '2' | '3' | '4' | '5' | '6' | '7'
+bin-digit	::= '0' | '1'
