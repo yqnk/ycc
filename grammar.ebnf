@@ -13,23 +13,26 @@ statement ::= return-stmt
             | simple-stmt
             | if-stmt
             | compound-stmt
+            | declaration
 
 compound-stmt   ::= '{' statement-list '}'
 simple-stmt     ::= exp ";"
 return-stmt     ::= "return" exp ";"
 if-stmt         ::= "if" "(" exp ")" statement [ "else" statement ]
 
-+Syntax::Assign
++Syntax::Declarations
 
-assign ::= "int" identifier [ = exp ] ";" 
+declaration ::= "int" identifier [ "=" exp ] ";" 
 
 +Syntax::Expressions
 
 exp   ::= identifier assign_op exp
         | exp "?" exp ":" exp
         | exp binop exp
-        | unary_op exp
+        | unop exp
         | "(" exp ")"
+        | constant
+        | identifier
 
 +Lexical::Operands
 
@@ -46,6 +49,7 @@ binop     ::= "||" | "&&" | "|" | "^" | "&"
 +Lexical::Tokens
 
 identifier	::= ( letter | '_' ) { letter | digit | '_' }
+constant	::= digit { digit }
 
 letter		::= upper-case | lower-case
 lower-case	::= 'a' | 'b' | 'c' | ... | 'x' | 'y' | 'z'

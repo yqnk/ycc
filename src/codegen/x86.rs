@@ -3,7 +3,7 @@ use std::{
     fmt::Write,
 };
 
-use crate::ast::{AstBlockItem, AstExpr, AstFunc, AstProgram, AstStatement, Type, Visitor};
+use crate::ast::{AstExpr, AstFunc, AstProgram, AstStatement, Type, Visitor};
 use crate::{Binop, Unop};
 
 const DEFAULT_VALUE: i32 = 0;
@@ -135,7 +135,6 @@ impl Visitor for X86Backend {
     type Func = ();
     type Statement = ();
     type Expr = ();
-    type BlockItem = ();
 
     fn visit_program(&mut self, program: &AstProgram) -> String {
         self.out.clear();
@@ -149,16 +148,11 @@ impl Visitor for X86Backend {
         self.label(&func.name);
         self.prologue();
 
-        for item in &func.body {
-            item.accept(self);
+        for statement in &func.body {
+            statement.accept(self);
         }
 
-        let ends_with_return = matches!(
-            func.body.last(),
-            Some(AstBlockItem::Statement {
-                statement: AstStatement::Return { .. }
-            })
-        );
+        let ends_with_return = matches!(func.body.last(), Some(AstStatement::Return { .. }));
 
         if !ends_with_return && func.name == "main" && func.ret_type == Type::Int {
             self.instr("movq", &format!("${}, %rax", DEFAULT_VALUE));
@@ -174,29 +168,29 @@ impl Visitor for X86Backend {
                 self.epilogue();
                 self.instr("ret", "");
             }
-            AstStatement::Expr { exp } => exp.accept(self),
-            AstStatement::Cond {
-                exp,
-                if_body,
-                else_body,
+            AstStatement::Simple { exp } => exp.accept(self),
+            AstStatement::If {
+                cond,
+                then_stmt,
+                else_stmt,
             } => {
                 let id = self.next_label_id();
                 let else_label = format!(".L_else_{}", id);
                 let post_label = format!(".L_post_{}", id);
 
-                exp.accept(self);
+                cond.accept(self);
 
                 self.instr("cmpq", "$0, %rax");
                 self.instr("je", &format!("{}", else_label));
-                if_body.accept(self);
+                then_stmt.accept(self);
                 self.instr("jmp", &format!("{}", post_label));
                 self.label(&else_label);
-                if let Some(e) = else_body {
-                    e.accept(self);
+                if let Some(stmt) = else_stmt {
+                    stmt.accept(self);
                 }
                 self.label(&post_label);
             }
-            AstStatement::Block { items } => {
+            AstStatement::Compound { statements } => {
                 // a block opens a scope based on it's parent (if it exists)
                 let outer_vars = self.var_map.clone();
 
@@ -206,7 +200,7 @@ impl Visitor for X86Backend {
                 // save rsp before new scope
                 let outer_index = self.stack_index;
 
-                items.iter().for_each(|i| i.accept(self));
+                statements.iter().for_each(|s| s.accept(self));
 
                 let reclaimed = outer_index - self.stack_index;
                 if reclaimed > 0 {
@@ -216,6 +210,25 @@ impl Visitor for X86Backend {
                 self.var_map = outer_vars;
                 self.scope_vars = outer_scope;
                 self.stack_index = outer_index;
+            }
+            AstStatement::Declaration {
+                var_type: _,
+                name,
+                exp,
+            } => {
+                if !self.scope_vars.insert(name.to_string()) {
+                    panic!("variable declared twice: {}", name);
+                }
+
+                if let Some(rhs) = exp {
+                    rhs.accept(self);
+                } else {
+                    self.instr("movq", &format!("${}, %rax", DEFAULT_VALUE));
+                }
+
+                self.instr("pushq", "%rax");
+                self.stack_index -= 8;
+                self.var_map.insert(name.to_string(), self.stack_index);
             }
         }
     }
@@ -293,33 +306,6 @@ impl Visitor for X86Backend {
                 self.label(&else_label);
                 else_exp.accept(self);
                 self.label(&post_label);
-            }
-        }
-    }
-
-    fn visit_blockitem(&mut self, expr: &crate::ast::AstBlockItem) -> Self::BlockItem {
-        match expr {
-            AstBlockItem::Statement { statement } => {
-                statement.accept(self);
-            }
-            AstBlockItem::VarDec {
-                var_type: _,
-                name,
-                exp,
-            } => {
-                if !self.scope_vars.insert(name.to_string()) {
-                    panic!("variable declared twice: {}", name);
-                }
-
-                if let Some(rhs) = exp {
-                    rhs.accept(self);
-                } else {
-                    self.instr("movq", &format!("${}, %rax", DEFAULT_VALUE));
-                }
-
-                self.instr("pushq", "%rax");
-                self.stack_index -= 8;
-                self.var_map.insert(name.to_string(), self.stack_index);
             }
         }
     }

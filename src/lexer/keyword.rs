@@ -4,6 +4,12 @@ pub enum Keyword {
     Return,
     If,
     Else,
+
+    For,
+    While,
+    Do,
+    Break,
+    Continue,
 }
 
 impl Keyword {
@@ -13,6 +19,11 @@ impl Keyword {
             "int" => Some(Keyword::Int),
             "if" => Some(Keyword::If),
             "else" => Some(Keyword::Else),
+            "for" => Some(Keyword::For),
+            "while" => Some(Keyword::While),
+            "do" => Some(Keyword::Do),
+            "break" => Some(Keyword::Break),
+            "continue" => Some(Keyword::Continue),
             _ => None,
         }
     }

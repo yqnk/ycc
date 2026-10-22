@@ -1,5 +1,3 @@
-use crate::ast::AstBlockItem;
-
 use super::nodes::{AstExpr, AstFunc, AstProgram, AstStatement};
 use super::visitor::Visitor;
 
@@ -37,7 +35,6 @@ impl Visitor for AstPrettyPrinter {
     type Func = ();
     type Statement = ();
     type Expr = ();
-    type BlockItem = ();
 
     fn visit_program(&mut self, program: &AstProgram) -> Self::Program {
         iprintln!(self, "PROGRAM");
@@ -49,8 +46,8 @@ impl Visitor for AstPrettyPrinter {
         iprintln!(self, "body:");
 
         self.nested(|pp| {
-            for item in &func.body {
-                item.accept(pp);
+            for statement in &func.body {
+                statement.accept(pp);
             }
         });
     }
@@ -62,37 +59,53 @@ impl Visitor for AstPrettyPrinter {
                 self.nested(|pp| exp.accept(pp));
                 iprintln!(self, ")");
             }
-            AstStatement::Expr { exp } => {
+            AstStatement::Simple { exp } => {
                 iprintln!(self, "EXPR (");
                 self.nested(|pp| exp.accept(pp));
                 iprintln!(self, ")");
             }
-            AstStatement::Cond {
-                exp,
-                if_body,
-                else_body,
+            AstStatement::If {
+                cond,
+                then_stmt,
+                else_stmt,
             } => {
-                iprintln!(self, "COND (");
+                iprintln!(self, "IF (");
                 self.nested(|pp| {
                     iprintln!(pp, "cond:");
-                    exp.accept(pp)
+                    cond.accept(pp)
                 });
                 self.nested(|pp| {
                     iprintln!(pp, "then body:");
-                    if_body.accept(pp);
+                    then_stmt.accept(pp);
                 });
-                if let Some(body) = else_body {
+                if let Some(stmt) = else_stmt {
                     iprintln!(self, "else body:");
-                    self.nested(|pp| body.accept(pp));
+                    self.nested(|pp| stmt.accept(pp));
                 }
                 iprintln!(self, ")");
             }
-            AstStatement::Block { items } => {
-                iprintln!(self, "BLOCK {");
+            AstStatement::Compound { statements } => {
+                iprintln!(self, "COMPOUND {");
                 self.nested(|pp| {
-                    items.iter().for_each(|i| i.accept(pp));
+                    statements.iter().for_each(|s| s.accept(pp));
                 });
                 iprintln!(self, "}");
+            }
+            AstStatement::Declaration {
+                var_type,
+                name,
+                exp,
+            } => {
+                iprintln!(self, "DECLARATION (");
+                self.nested(|pp| {
+                    iprintln!(pp, format!("{:?} {}", var_type, name));
+                    if let Some(e) = exp {
+                        iprintln!(pp, "=");
+                        e.accept(pp);
+                    }
+                });
+
+                iprintln!(self, ")");
             }
         }
     }
@@ -140,28 +153,6 @@ impl Visitor for AstPrettyPrinter {
                     None => iprintln!(self, format!("ASSIGN {} =", lhs)),
                 }
                 self.nested(|pp| rhs.accept(pp));
-            }
-        }
-    }
-
-    fn visit_blockitem(&mut self, expr: &super::AstBlockItem) -> Self::BlockItem {
-        match expr {
-            AstBlockItem::Statement { statement } => statement.accept(self),
-            AstBlockItem::VarDec {
-                var_type,
-                name,
-                exp,
-            } => {
-                iprintln!(self, "VARDEC (");
-                self.nested(|pp| {
-                    iprintln!(pp, format!("{:?} {}", var_type, name));
-                    if let Some(e) = exp {
-                        iprintln!(pp, "=");
-                        e.accept(pp);
-                    }
-                });
-
-                iprintln!(self, ")");
             }
         }
     }

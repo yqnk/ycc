@@ -58,9 +58,10 @@ impl Parser {
         false
     }
 
+    // program ::= function
     pub fn parse_program(&mut self) -> AstProgram {
         AstProgram {
-            main: self.parse_func(),
+            main: self.parse_func_def(),
         }
     }
 
@@ -81,15 +82,10 @@ impl Parser {
         }
     }
 
-    fn parse_func(&mut self) -> AstFunc {
-        let ret_type = self.parse_type();
-        let name = self.parse_identifier();
-
-        self.eat(&TokenType::LParen);
-        // parse params
-        self.eat(&TokenType::RParen);
-
-        let body = self.parse_block_items("function body");
+    // func-def ::= func-signature compound-stmt
+    fn parse_func_def(&mut self) -> AstFunc {
+        let (ret_type, name) = self.parse_func_signature();
+        let body = self.parse_statement_list("function body");
 
         AstFunc {
             ret_type,
@@ -98,10 +94,30 @@ impl Parser {
         }
     }
 
-    fn parse_block_items(&mut self, what: &str) -> Vec<AstBlockItem> {
+    // func-signature ::= "int" identifier '(' ')'
+    fn parse_func_signature(&mut self) -> (Type, String) {
+        let ret_type = self.parse_type();
+        let name = self.parse_identifier();
+
+        self.eat(&TokenType::LParen);
+        // parse params
+        self.eat(&TokenType::RParen);
+
+        (ret_type, name)
+    }
+
+    // compound-stmt ::= '{' statement-list '}'
+    fn parse_compound_stmt(&mut self) -> AstStatement {
+        AstStatement::Compound {
+            statements: self.parse_statement_list("block"),
+        }
+    }
+
+    // statement-list ::= { statement }, delimited by the enclosing braces
+    fn parse_statement_list(&mut self, what: &str) -> Vec<AstStatement> {
         self.eat(&TokenType::LBrace);
 
-        let mut items = Vec::new();
+        let mut statements = Vec::new();
 
         loop {
             match self.peek() {
@@ -110,26 +126,28 @@ impl Parser {
                     let eof = self.lexer.peek_token();
                     panic!("{}: unterminated {what}: missing '}}'", self.loc(&eof))
                 }
-                _ => items.push(self.parse_block_item()),
+                _ => statements.push(self.parse_statement()),
             }
         }
 
         self.eat(&TokenType::RBrace);
 
-        items
+        statements
     }
 
-    fn parse_block_item(&mut self) -> AstBlockItem {
-        if self.peek().is_type_specifier() {
-            return self.parse_vardec();
-        }
-
-        AstBlockItem::Statement {
-            statement: self.parse_statement(),
+    // statement ::= return-stmt | simple-stmt | if-stmt | compound-stmt | declaration
+    fn parse_statement(&mut self) -> AstStatement {
+        match self.peek() {
+            t if t.is_type_specifier() => self.parse_declaration(),
+            TokenType::Keyword(Keyword::Return) => self.parse_return_stmt(),
+            TokenType::Keyword(Keyword::If) => self.parse_if_stmt(),
+            TokenType::LBrace => self.parse_compound_stmt(),
+            _ => self.parse_simple_stmt(),
         }
     }
 
-    fn parse_vardec(&mut self) -> AstBlockItem {
+    // declaration ::= "int" identifier [ "=" exp ] ";"
+    fn parse_declaration(&mut self) -> AstStatement {
         let var_type = self.parse_type();
         let name = self.parse_identifier();
 
@@ -141,57 +159,51 @@ impl Parser {
 
         self.eat(&TokenType::Semi);
 
-        AstBlockItem::VarDec {
+        AstStatement::Declaration {
             var_type,
             name,
             exp,
         }
     }
 
-    fn parse_block_statement(&mut self) -> AstStatement {
-        AstStatement::Block {
-            items: self.parse_block_items("block"),
-        }
+    // return-stmt ::= "return" exp ";"
+    fn parse_return_stmt(&mut self) -> AstStatement {
+        self.eat(&TokenType::Keyword(Keyword::Return));
+
+        let exp = self.parse_expr(LOWEST_PRECEDENCE);
+        self.eat(&TokenType::Semi);
+
+        AstStatement::Return { exp }
     }
 
-    fn parse_statement(&mut self) -> AstStatement {
-        match self.peek() {
-            TokenType::Keyword(Keyword::Return) => {
-                self.eat(&TokenType::Keyword(Keyword::Return));
+    // simple-stmt ::= exp ";"
+    fn parse_simple_stmt(&mut self) -> AstStatement {
+        let exp = self.parse_expr(LOWEST_PRECEDENCE);
+        self.eat(&TokenType::Semi);
 
-                let exp = self.parse_expr(LOWEST_PRECEDENCE);
-                self.eat(&TokenType::Semi);
+        AstStatement::Simple { exp }
+    }
 
-                AstStatement::Return { exp }
-            }
-            TokenType::Keyword(Keyword::If) => {
-                self.eat(&TokenType::Keyword(Keyword::If));
+    // if-stmt ::= "if" "(" exp ")" statement [ "else" statement ]
+    fn parse_if_stmt(&mut self) -> AstStatement {
+        self.eat(&TokenType::Keyword(Keyword::If));
 
-                self.eat(&TokenType::LParen);
-                let exp = self.parse_expr(LOWEST_PRECEDENCE);
-                self.eat(&TokenType::RParen);
+        self.eat(&TokenType::LParen);
+        let cond = self.parse_expr(LOWEST_PRECEDENCE);
+        self.eat(&TokenType::RParen);
 
-                let if_body = self.parse_statement();
+        let then_stmt = self.parse_statement();
 
-                let else_body = if self.eat_if(&TokenType::Keyword(Keyword::Else)) {
-                    Some(Box::new(self.parse_statement()))
-                } else {
-                    None
-                };
+        let else_stmt = if self.eat_if(&TokenType::Keyword(Keyword::Else)) {
+            Some(Box::new(self.parse_statement()))
+        } else {
+            None
+        };
 
-                AstStatement::Cond {
-                    exp,
-                    if_body: Box::new(if_body),
-                    else_body,
-                }
-            }
-            TokenType::LBrace => self.parse_block_statement(),
-            _ => {
-                let exp = self.parse_expr(LOWEST_PRECEDENCE);
-                self.eat(&TokenType::Semi);
-
-                AstStatement::Expr { exp }
-            }
+        AstStatement::If {
+            cond,
+            then_stmt: Box::new(then_stmt),
+            else_stmt,
         }
     }
 
