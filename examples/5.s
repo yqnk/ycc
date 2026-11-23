@@ -37,3 +37,4 @@ main:
 	movq	%rbp, %rsp
 	popq	%rbp
 	ret
+	addq	$16, %rsp

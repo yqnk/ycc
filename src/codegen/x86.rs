@@ -229,6 +229,7 @@ impl Visitor for X86Backend {
                 self.stack_index -= 8;
                 self.var_map.insert(name.to_string(), self.stack_index);
             }
+            _ => unimplemented!(),
         }
     }
 

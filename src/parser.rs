@@ -109,12 +109,12 @@ impl Parser {
     // compound-stmt ::= '{' statement-list '}'
     fn parse_compound_stmt(&mut self, what: &str) -> AstStatement {
         AstStatement::Compound {
-            statements: self.parse_statement_list(what),
+            statements: self._parse_statement_list(what),
         }
     }
 
     // statement-list ::= { statement }, delimited by the enclosing braces
-    fn parse_statement_list(&mut self, what: &str) -> Vec<AstStatement> {
+    fn _parse_statement_list(&mut self, what: &str) -> Vec<AstStatement> {
         self.eat(&TokenType::LBrace);
 
         let mut statements = Vec::new();
@@ -141,6 +141,12 @@ impl Parser {
             t if t.is_type_specifier() => self.parse_declaration(),
             TokenType::Keyword(Keyword::Return) => self.parse_return_stmt(),
             TokenType::Keyword(Keyword::If) => self.parse_if_stmt(),
+            TokenType::Keyword(Keyword::While) => self.parse_while_stmt(),
+            TokenType::Keyword(Keyword::For) => todo!("parse_for"),
+            TokenType::Keyword(Keyword::Do) => self.parse_do_while_stmt(),
+            TokenType::Keyword(Keyword::Break) => self.parse_break_stmt(),
+            TokenType::Keyword(Keyword::Continue) => self.parse_continue_stmt(),
+            TokenType::Keyword(Keyword::Null) => self.parse_null_stmt(),
             TokenType::LBrace => self.parse_compound_stmt("block"),
             _ => self.parse_simple_stmt(),
         }
@@ -205,6 +211,54 @@ impl Parser {
             then_stmt: Box::new(then_stmt),
             else_stmt,
         }
+    }
+
+    // while-stmt      ::= "while" "(" exp ")" compound-stmt
+    fn parse_while_stmt(&mut self) -> AstStatement {
+        self.eat(&TokenType::Keyword(Keyword::While));
+
+        self.eat(&TokenType::LParen);
+        let cond = self.parse_expr(LOWEST_PRECEDENCE);
+        self.eat(&TokenType::RParen);
+
+        let body_stmt = Box::new(self.parse_statement());
+        AstStatement::While { cond, body_stmt }
+    }
+
+    fn parse_do_while_stmt(&mut self) -> AstStatement {
+        self.eat(&TokenType::Keyword(Keyword::Do));
+
+        let body_stmt = Box::new(self.parse_statement());
+
+        self.eat(&TokenType::Keyword(Keyword::While));
+
+        self.eat(&TokenType::LParen);
+        let cond = self.parse_expr(LOWEST_PRECEDENCE);
+        self.eat(&TokenType::RParen);
+
+        self.eat(&TokenType::Semi);
+
+        AstStatement::Do { body_stmt, cond }
+    }
+
+    fn parse_break_stmt(&mut self) -> AstStatement {
+        self.eat(&TokenType::Keyword(Keyword::Break));
+        self.eat(&TokenType::Semi);
+
+        AstStatement::Break
+    }
+
+    fn parse_continue_stmt(&mut self) -> AstStatement {
+        self.eat(&TokenType::Keyword(Keyword::Continue));
+        self.eat(&TokenType::Semi);
+
+        AstStatement::Continue
+    }
+
+    fn parse_null_stmt(&mut self) -> AstStatement {
+        self.eat(&TokenType::Semi);
+
+        AstStatement::Null
     }
 
     fn parse_expr(&mut self, min_power: u8) -> AstExpr {

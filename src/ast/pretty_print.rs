@@ -80,6 +80,44 @@ impl Visitor for AstPrettyPrinter {
                 }
                 iprintln!(self, ")");
             }
+            AstStatement::While { cond, body_stmt } => {
+                iprintln!(self, "WHILE (");
+                self.nested(|pp| {
+                    iprintln!(pp, "cond:");
+                    cond.accept(pp);
+                });
+                self.nested(|pp| {
+                    iprintln!(pp, "while body:");
+                    body_stmt.accept(pp);
+                });
+                iprintln!(self, ")");
+            }
+            AstStatement::For {
+                init: _,
+                update: _,
+                cond: _,
+            } => {
+                todo!("pretty_print_for")
+            }
+            AstStatement::Do { body_stmt, cond } => {
+                iprintln!(self, "DO WHILE (");
+                self.nested(|pp| {
+                    iprintln!(pp, "while body:");
+                    body_stmt.accept(pp);
+                });
+                self.nested(|pp| {
+                    iprintln!(pp, "cond:");
+                    cond.accept(pp);
+                });
+                iprintln!(self, ")");
+            }
+            AstStatement::Break => {
+                iprintln!(self, "BREAK");
+            }
+            AstStatement::Continue => {
+                iprintln!(self, "CONTINUE");
+            }
+            AstStatement::Null => iprintln!(self, "NULL (;)"),
             AstStatement::Compound { statements } => {
                 iprintln!(self, "COMPOUND {");
                 self.nested(|pp| {

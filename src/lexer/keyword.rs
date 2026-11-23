@@ -10,6 +10,8 @@ pub enum Keyword {
     Do,
     Break,
     Continue,
+
+    Null,
 }
 
 impl Keyword {
@@ -24,6 +26,7 @@ impl Keyword {
             "do" => Some(Keyword::Do),
             "break" => Some(Keyword::Break),
             "continue" => Some(Keyword::Continue),
+            ";" => Some(Keyword::Null),
             _ => None,
         }
     }

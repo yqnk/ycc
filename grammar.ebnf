@@ -1,3 +1,12 @@
+###### NOTES: ######
+
+expression-lists (expr-list) are not handled yet. (operator , would be required)
+for-stmt: incorrect because declaration is not very well defined, too "basic" (no proper assignation)
+null-stmt not handled anywhere
+
+####################
+
+
 program ::= function
 
 +Functions
@@ -14,11 +23,23 @@ statement ::= return-stmt
             | if-stmt
             | compound-stmt
             | declaration
+            | while-stmt
+            | do-stmt
+            | for-stmt
+            | continue-stmt
+            | break-stmt
+            | null-stmt
 
 compound-stmt   ::= '{' statement-list '}'
 simple-stmt     ::= exp ";"
 return-stmt     ::= "return" exp ";"
 if-stmt         ::= "if" "(" exp ")" statement [ "else" statement ]
+while-stmt      ::= "while" "(" exp ")" compound-stmt
+do-stmt         ::= "do" compound-stmt "while" "(" exp ")" ";"
+for-stmt        ::= "for" "(" declaration exp ";" exp ";" ")" compound-stmt
+continue-stmt   ::= "continue" ";"
+break-stmt      ::= "break" ";"
+null-stmt       ::= ";"
 
 +Syntax::Declarations
 

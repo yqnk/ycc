@@ -24,6 +24,22 @@ pub enum AstStatement {
         then_stmt: Box<AstStatement>,
         else_stmt: Option<Box<AstStatement>>,
     },
+    While {
+        cond: AstExpr,
+        body_stmt: Box<AstStatement>,
+    },
+    For {
+        init: Box<AstStatement>,
+        cond: AstExpr,
+        update: AstExpr,
+    },
+    Do {
+        body_stmt: Box<AstStatement>,
+        cond: AstExpr,
+    },
+    Break,
+    Continue,
+    Null,
     Compound {
         statements: Vec<AstStatement>,
     },
