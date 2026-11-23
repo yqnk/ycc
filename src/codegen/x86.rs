@@ -148,11 +148,10 @@ impl Visitor for X86Backend {
         self.label(&func.name);
         self.prologue();
 
-        for statement in &func.body {
-            statement.accept(self);
-        }
+        assert!(matches!(func.body, AstStatement::Compound { .. }));
+        func.body.accept(self);
 
-        let ends_with_return = matches!(func.body.last(), Some(AstStatement::Return { .. }));
+        let ends_with_return = matches!(func.body, AstStatement::Compound { ref statements } if matches!(statements.last(), Some(AstStatement::Return { .. })));
 
         if !ends_with_return && func.name == "main" && func.ret_type == Type::Int {
             self.instr("movq", &format!("${}, %rax", DEFAULT_VALUE));

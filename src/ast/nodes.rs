@@ -9,7 +9,7 @@ pub struct AstProgram {
 pub struct AstFunc {
     pub ret_type: Type,
     pub name: String,
-    pub body: Vec<AstStatement>,
+    pub body: AstStatement,
 }
 
 pub enum AstStatement {

@@ -85,7 +85,7 @@ impl Parser {
     // func-def ::= func-signature compound-stmt
     fn parse_func_def(&mut self) -> AstFunc {
         let (ret_type, name) = self.parse_func_signature();
-        let body = self.parse_statement_list("function body");
+        let body = self.parse_compound_stmt("function body");
 
         AstFunc {
             ret_type,
@@ -107,9 +107,9 @@ impl Parser {
     }
 
     // compound-stmt ::= '{' statement-list '}'
-    fn parse_compound_stmt(&mut self) -> AstStatement {
+    fn parse_compound_stmt(&mut self, what: &str) -> AstStatement {
         AstStatement::Compound {
-            statements: self.parse_statement_list("block"),
+            statements: self.parse_statement_list(what),
         }
     }
 
@@ -141,7 +141,7 @@ impl Parser {
             t if t.is_type_specifier() => self.parse_declaration(),
             TokenType::Keyword(Keyword::Return) => self.parse_return_stmt(),
             TokenType::Keyword(Keyword::If) => self.parse_if_stmt(),
-            TokenType::LBrace => self.parse_compound_stmt(),
+            TokenType::LBrace => self.parse_compound_stmt("block"),
             _ => self.parse_simple_stmt(),
         }
     }
